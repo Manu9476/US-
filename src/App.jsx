@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BookOpenText,
   CalendarRange,
@@ -6,9 +6,11 @@ import {
   Heart,
   LayoutDashboard,
   MessageSquareText,
+  Moon,
   Music4,
   Plus,
   Shuffle,
+  Sun,
   Target,
 } from 'lucide-react'
 import { ImageUploadField } from './components/ImageUploadField'
@@ -86,6 +88,7 @@ function App() {
   const [dreams, setDreams] = useLocalStorageState('us-plus-premium-dreams', [])
   const [notes, setNotes] = useLocalStorageState('us-plus-premium-vault', [])
   const [playlist, setPlaylist] = useLocalStorageState('us-plus-premium-playlist', [])
+  const [theme, setTheme] = useLocalStorageState('us-plus-theme', 'dark')
   const [idea, setIdea] = useState(dateIdeas[0])
 
   const days = getDaysTogether(profile.since, now)
@@ -107,6 +110,11 @@ function App() {
   )
 
   const topDream = useMemo(() => [...dreams].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))[0], [dreams])
+  const isLightTheme = theme === 'light'
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   return (
     <div className="app-ui">
@@ -137,8 +145,23 @@ function App() {
           })}
         </nav>
 
-        <div className="partner-chip">
-          {profile.one} + {profile.two}
+        <div className="header-actions">
+          <button
+            type="button"
+            className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
+            aria-label={`Switch to ${isLightTheme ? 'dark' : 'light'} theme`}
+            aria-pressed={isLightTheme}
+            onClick={() => setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))}
+          >
+            <span className="theme-toggle-icon">
+              {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </span>
+            <span>{isLightTheme ? 'Light' : 'Dark'}</span>
+          </button>
+
+          <div className="partner-chip">
+            {profile.one} + {profile.two}
+          </div>
         </div>
       </header>
 
