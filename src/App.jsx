@@ -35,7 +35,7 @@ const navItems = [
   { id: 'playlist', label: 'Music', icon: Music4 },
 ]
 
-const initialProfile = { one: 'Partner One', two: 'Partner Two', since: '2024-01-01' }
+const initialProfile = { one: 'Partner One', two: 'Partner Two', since: '2024-01-01', photoUrl: '' }
 const dateIdeas = [
   'Dinner at a new place nearby',
   'Coffee walk and a shared playlist',
@@ -194,7 +194,27 @@ function DashboardSection({
   setProfile,
 }) {
   return (
-    <section className="app-page">
+    <section className="app-page dashboard-page">
+      <article className="couple-card">
+        <div className="couple-photo-frame">
+          {profile.photoUrl ? (
+            <img
+              className="couple-photo"
+              src={profile.photoUrl}
+              alt={`${profile.one} and ${profile.two}`}
+            />
+          ) : (
+            <div className="couple-photo-placeholder">
+              <Heart className="h-10 w-10" />
+            </div>
+          )}
+        </div>
+        <div className="couple-names">
+          <h1>{profile.one} + {profile.two}</h1>
+          <p className="body-muted">Together since {formatDate(profile.since)}</p>
+        </div>
+      </article>
+
       <PageHeader
         eyebrow="Dashboard"
         title="A simple place for both of you"
@@ -247,6 +267,11 @@ function DashboardSection({
               />
             </label>
           </div>
+          <ImageUploadField
+            label="Couple picture"
+            value={profile.photoUrl ?? ''}
+            onChange={(value) => setProfile((currentProfile) => ({ ...currentProfile, photoUrl: value }))}
+          />
         </article>
 
         <article className="info-panel">
