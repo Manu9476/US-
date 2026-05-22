@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   BookOpenText,
   CalendarRange,
@@ -49,6 +49,14 @@ const timelineMoodMap = {
   adventure: 'wild',
   cozy: 'cozy',
 }
+
+const readImageAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 
 function PageHeader({ eyebrow, title, summary }) {
   return (
@@ -193,6 +201,20 @@ function DashboardSection({
   notesCount,
   setProfile,
 }) {
+  const couplePhotoInputRef = useRef(null)
+
+  const handleCouplePhotoChange = async (event) => {
+    const [file] = event.target.files || []
+
+    if (!file || !file.type.startsWith('image/')) {
+      return
+    }
+
+    const photoUrl = await readImageAsDataUrl(file)
+    setProfile((currentProfile) => ({ ...currentProfile, photoUrl }))
+    event.target.value = ''
+  }
+
   return (
     <section className="app-page dashboard-page">
       <article className="couple-card">
@@ -208,6 +230,20 @@ function DashboardSection({
               <Heart className="h-10 w-10" />
             </div>
           )}
+          <button
+            type="button"
+            className="couple-upload-button"
+            onClick={() => couplePhotoInputRef.current?.click()}
+          >
+            {profile.photoUrl ? 'Change picture' : 'Add picture'}
+          </button>
+          <input
+            ref={couplePhotoInputRef}
+            type="file"
+            className="hidden"
+            accept="image/*"
+            onChange={handleCouplePhotoChange}
+          />
         </div>
         <div className="couple-names">
           <h1>{profile.one} + {profile.two}</h1>
