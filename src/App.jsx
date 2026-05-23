@@ -8,10 +8,14 @@ import {
   MessageSquareText,
   Moon,
   Music4,
+  Pencil,
   Plus,
+  Save,
   Shuffle,
   Sun,
   Target,
+  Trash2,
+  X,
 } from 'lucide-react'
 import { ImageUploadField } from './components/ImageUploadField'
 import { RichTextEditor } from './components/RichTextEditor'
@@ -194,6 +198,24 @@ function App() {
                 ...items,
               ])
             }
+            onDeleteMemory={(memoryId) =>
+              setTimeline((items) => items.filter((item) => item.id !== memoryId))
+            }
+            onUpdateMemory={(memoryId, memory) =>
+              setTimeline((items) =>
+                items.map((item) =>
+                  item.id === memoryId
+                    ? {
+                        ...item,
+                        ...memory,
+                        photo: memory.photoUrl,
+                        photoUrl: memory.photoUrl,
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : item,
+                ),
+              )
+            }
           />
         )}
 
@@ -370,13 +392,41 @@ function DashboardSection({
 
 function DateSection({ dates, setDates, idea, onShuffleIdea }) {
   const [form, setForm] = useState({ title: '', when: '', place: '', note: '', photo: '' })
+  const [editingId, setEditingId] = useState(null)
   const ordered = sortByDateAsc(dates, (item) => item.when)
 
   const add = (event) => {
     event.preventDefault()
     if (!form.title.trim() || !form.when || !form.place.trim()) return
-    setDates((items) => [...items, { id: createId('date'), ...form }])
+
+    if (editingId) {
+      setDates((items) =>
+        items.map((item) =>
+          item.id === editingId ? { ...item, ...form, updatedAt: new Date().toISOString() } : item,
+        ),
+      )
+      setEditingId(null)
+    } else {
+      setDates((items) => [...items, { id: createId('date'), ...form }])
+    }
+
     setForm({ title: '', when: '', place: '', note: '', photo: '' })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setForm({ title: '', when: '', place: '', note: '', photo: '' })
+  }
+
+  const editDate = (datePlan) => {
+    setEditingId(datePlan.id)
+    setForm({
+      title: datePlan.title ?? '',
+      when: datePlan.when ?? '',
+      place: datePlan.place ?? '',
+      note: datePlan.note ?? '',
+      photo: datePlan.photo ?? '',
+    })
   }
 
   return (
@@ -386,7 +436,7 @@ function DateSection({ dates, setDates, idea, onShuffleIdea }) {
       <div className="workspace-grid">
         <form className="tool-panel" onSubmit={add}>
           <div className="panel-head">
-            <h2>New plan</h2>
+            <h2>{editingId ? 'Edit plan' : 'New plan'}</h2>
             <button type="button" onClick={onShuffleIdea} className="secondary-button icon-button" aria-label="Suggest idea">
               <Shuffle className="h-4 w-4" />
             </button>
@@ -399,7 +449,17 @@ function DateSection({ dates, setDates, idea, onShuffleIdea }) {
           </div>
           <RichTextEditor label="Notes" value={form.note} onChange={(value) => setForm((current) => ({ ...current, note: value }))} placeholder="Details, timing, reservation info..." />
           <ImageUploadField label="Photo" value={form.photo} onChange={(value) => setForm((current) => ({ ...current, photo: value }))} />
-          <button className="primary-button" type="submit"><Plus className="h-4 w-4" /> Save plan</button>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingId ? 'Save changes' : 'Save plan'}
+            </button>
+            {editingId ? (
+              <button type="button" className="secondary-button" onClick={cancelEdit}>
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            ) : null}
+          </div>
         </form>
 
         <div className="list-panel">
@@ -411,7 +471,23 @@ function DateSection({ dates, setDates, idea, onShuffleIdea }) {
                     <h3>{item.title}</h3>
                     <p className="body-muted">{formatDateTime(item.when)} · {item.place}</p>
                   </div>
-                  <CheckCircle2 className="h-5 w-5 accent-text" />
+                  <div className="card-actions">
+                    <CheckCircle2 className="h-5 w-5 accent-text" />
+                    <button type="button" className="icon-action" aria-label={`Edit ${item.title}`} onClick={() => editDate(item)}>
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-action destructive-action"
+                      aria-label={`Delete ${item.title}`}
+                      onClick={() => {
+                        setDates((list) => list.filter((datePlan) => datePlan.id !== item.id))
+                        if (editingId === item.id) cancelEdit()
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 {item.photo ? <img src={item.photo} alt={item.title} className="item-image" /> : null}
                 {item.note ? <div className="rich-content body-secondary" dangerouslySetInnerHTML={{ __html: item.note }} /> : null}
@@ -428,12 +504,39 @@ function DateSection({ dates, setDates, idea, onShuffleIdea }) {
 
 function GoalsSection({ dreams, setDreams }) {
   const [form, setForm] = useState({ title: '', target: '', progress: 10 })
+  const [editingId, setEditingId] = useState(null)
+  const orderedGoals = sortByDateAsc(dreams, (item) => item.target)
 
   const add = (event) => {
     event.preventDefault()
     if (!form.title.trim() || !form.target) return
-    setDreams((items) => [...items, { id: createId('dream'), ...form }])
+
+    if (editingId) {
+      setDreams((items) =>
+        items.map((item) =>
+          item.id === editingId ? { ...item, ...form, updatedAt: new Date().toISOString() } : item,
+        ),
+      )
+      setEditingId(null)
+    } else {
+      setDreams((items) => [...items, { id: createId('dream'), ...form }])
+    }
+
     setForm({ title: '', target: '', progress: 10 })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setForm({ title: '', target: '', progress: 10 })
+  }
+
+  const editGoal = (goal) => {
+    setEditingId(goal.id)
+    setForm({
+      title: goal.title ?? '',
+      target: goal.target ?? '',
+      progress: goal.progress ?? 0,
+    })
   }
 
   return (
@@ -442,7 +545,7 @@ function GoalsSection({ dreams, setDreams }) {
 
       <div className="workspace-grid">
         <form className="tool-panel" onSubmit={add}>
-          <h2>New goal</h2>
+          <h2>{editingId ? 'Edit goal' : 'New goal'}</h2>
           <div className="field-grid">
             <input className="input-field" placeholder="Weekend trip" value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
             <input type="datetime-local" className="input-field" value={form.target} onChange={(event) => setForm((value) => ({ ...value, target: event.target.value }))} />
@@ -451,12 +554,22 @@ function GoalsSection({ dreams, setDreams }) {
               <input type="range" min={0} max={100} value={form.progress} onChange={(event) => setForm((value) => ({ ...value, progress: Number(event.target.value) }))} />
             </label>
           </div>
-          <button className="primary-button" type="submit"><Plus className="h-4 w-4" /> Save goal</button>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingId ? 'Save changes' : 'Save goal'}
+            </button>
+            {editingId ? (
+              <button type="button" className="secondary-button" onClick={cancelEdit}>
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            ) : null}
+          </div>
         </form>
 
         <div className="list-panel">
-          {sortByDateAsc(dreams, (item) => item.target).length ? (
-            sortByDateAsc(dreams, (item) => item.target).map((item) => {
+          {orderedGoals.length ? (
+            orderedGoals.map((item) => {
               const parts = getCountdownParts(item.target, new Date())
 
               return (
@@ -466,7 +579,23 @@ function GoalsSection({ dreams, setDreams }) {
                       <h3>{item.title}</h3>
                       <p className="body-muted">{formatDateTime(item.target)}</p>
                     </div>
-                    <span className="count-pill">{parts.days}d</span>
+                    <div className="card-actions">
+                      <span className="count-pill">{parts.days}d</span>
+                      <button type="button" className="icon-action" aria-label={`Edit ${item.title}`} onClick={() => editGoal(item)}>
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-action destructive-action"
+                        aria-label={`Delete ${item.title}`}
+                        onClick={() => {
+                          setDreams((list) => list.filter((goal) => goal.id !== item.id))
+                          if (editingId === item.id) cancelEdit()
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <div className="progress-track">
                     <span style={{ width: `${item.progress}%` }} />
@@ -486,12 +615,39 @@ function GoalsSection({ dreams, setDreams }) {
 
 function NotesSection({ notes, setNotes }) {
   const [form, setForm] = useState({ subject: '', message: '', photo: '', locked: true })
+  const [editingId, setEditingId] = useState(null)
 
   const add = (event) => {
     event.preventDefault()
     if (!form.subject.trim() || !form.message.replace(/<[^>]+>/g, '').trim()) return
-    setNotes((items) => [{ id: createId('note'), ...form, createdAt: new Date().toISOString() }, ...items])
+
+    if (editingId) {
+      setNotes((items) =>
+        items.map((item) =>
+          item.id === editingId ? { ...item, ...form, updatedAt: new Date().toISOString() } : item,
+        ),
+      )
+      setEditingId(null)
+    } else {
+      setNotes((items) => [{ id: createId('note'), ...form, createdAt: new Date().toISOString() }, ...items])
+    }
+
     setForm({ subject: '', message: '', photo: '', locked: true })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setForm({ subject: '', message: '', photo: '', locked: true })
+  }
+
+  const editNote = (note) => {
+    setEditingId(note.id)
+    setForm({
+      subject: note.subject ?? '',
+      message: note.message ?? '',
+      photo: note.photo ?? '',
+      locked: note.locked ?? false,
+    })
   }
 
   return (
@@ -500,7 +656,7 @@ function NotesSection({ notes, setNotes }) {
 
       <div className="workspace-grid">
         <form className="tool-panel" onSubmit={add}>
-          <h2>New note</h2>
+          <h2>{editingId ? 'Edit note' : 'New note'}</h2>
           <input className="input-field" placeholder="Subject" value={form.subject} onChange={(event) => setForm((value) => ({ ...value, subject: event.target.value }))} />
           <label className="check-field">
             <input type="checkbox" checked={form.locked} onChange={(event) => setForm((value) => ({ ...value, locked: event.target.checked }))} />
@@ -508,7 +664,17 @@ function NotesSection({ notes, setNotes }) {
           </label>
           <RichTextEditor label="Message" value={form.message} onChange={(value) => setForm((current) => ({ ...current, message: value }))} placeholder="Write the note..." />
           <ImageUploadField label="Attachment" value={form.photo} onChange={(value) => setForm((current) => ({ ...current, photo: value }))} />
-          <button className="primary-button" type="submit"><Plus className="h-4 w-4" /> Save note</button>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingId ? 'Save changes' : 'Save note'}
+            </button>
+            {editingId ? (
+              <button type="button" className="secondary-button" onClick={cancelEdit}>
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            ) : null}
+          </div>
         </form>
 
         <div className="list-panel">
@@ -520,7 +686,23 @@ function NotesSection({ notes, setNotes }) {
                     <h3>{item.subject}</h3>
                     <p className="body-muted">{formatDateTime(item.createdAt)}</p>
                   </div>
-                  <span className={item.locked ? 'status-pill' : 'status-pill status-pill-open'}>{item.locked ? 'Hidden' : 'Open'}</span>
+                  <div className="card-actions">
+                    <span className={item.locked ? 'status-pill' : 'status-pill status-pill-open'}>{item.locked ? 'Hidden' : 'Open'}</span>
+                    <button type="button" className="icon-action" aria-label={`Edit ${item.subject}`} onClick={() => editNote(item)}>
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-action destructive-action"
+                      aria-label={`Delete ${item.subject}`}
+                      onClick={() => {
+                        setNotes((list) => list.filter((note) => note.id !== item.id))
+                        if (editingId === item.id) cancelEdit()
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 {item.photo ? <img src={item.photo} alt={item.subject} className="item-image" /> : null}
                 {item.locked ? (
@@ -543,12 +725,38 @@ function NotesSection({ notes, setNotes }) {
 
 function MusicSection({ playlist, setPlaylist, now }) {
   const [form, setForm] = useState({ title: '', artist: '', link: '' })
+  const [editingId, setEditingId] = useState(null)
 
   const add = (event) => {
     event.preventDefault()
     if (!form.title.trim() || !form.artist.trim()) return
-    setPlaylist((items) => [{ id: createId('track'), ...form, createdAt: now.toISOString() }, ...items])
+
+    if (editingId) {
+      setPlaylist((items) =>
+        items.map((item) =>
+          item.id === editingId ? { ...item, ...form, updatedAt: now.toISOString() } : item,
+        ),
+      )
+      setEditingId(null)
+    } else {
+      setPlaylist((items) => [{ id: createId('track'), ...form, createdAt: now.toISOString() }, ...items])
+    }
+
     setForm({ title: '', artist: '', link: '' })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setForm({ title: '', artist: '', link: '' })
+  }
+
+  const editTrack = (track) => {
+    setEditingId(track.id)
+    setForm({
+      title: track.title ?? '',
+      artist: track.artist ?? '',
+      link: track.link ?? '',
+    })
   }
 
   return (
@@ -557,13 +765,23 @@ function MusicSection({ playlist, setPlaylist, now }) {
 
       <div className="workspace-grid">
         <form className="tool-panel" onSubmit={add}>
-          <h2>New song</h2>
+          <h2>{editingId ? 'Edit song' : 'New song'}</h2>
           <div className="field-grid">
             <input className="input-field" placeholder="Song title" value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
             <input className="input-field" placeholder="Artist" value={form.artist} onChange={(event) => setForm((value) => ({ ...value, artist: event.target.value }))} />
             <input className="input-field" placeholder="Spotify or YouTube link" value={form.link} onChange={(event) => setForm((value) => ({ ...value, link: event.target.value }))} />
           </div>
-          <button className="primary-button" type="submit"><Plus className="h-4 w-4" /> Add song</button>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingId ? 'Save changes' : 'Add song'}
+            </button>
+            {editingId ? (
+              <button type="button" className="secondary-button" onClick={cancelEdit}>
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            ) : null}
+          </div>
         </form>
 
         <div className="list-panel">
@@ -575,7 +793,23 @@ function MusicSection({ playlist, setPlaylist, now }) {
                     <h3>{item.title}</h3>
                     <p className="body-muted">{item.artist}</p>
                   </div>
-                  <Music4 className="h-5 w-5 accent-text" />
+                  <div className="card-actions">
+                    <Music4 className="h-5 w-5 accent-text" />
+                    <button type="button" className="icon-action" aria-label={`Edit ${item.title}`} onClick={() => editTrack(item)}>
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-action destructive-action"
+                      aria-label={`Delete ${item.title}`}
+                      onClick={() => {
+                        setPlaylist((list) => list.filter((track) => track.id !== item.id))
+                        if (editingId === item.id) cancelEdit()
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 <p className="body-muted">{formatDateTime(item.createdAt)}</p>
                 {item.link ? (

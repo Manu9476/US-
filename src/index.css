@@ -556,6 +556,46 @@ a {
   gap: 14px;
 }
 
+.form-actions,
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-tint);
+  color: var(--secondary);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.icon-action:hover {
+  border-color: rgba(185, 167, 255, 0.34);
+  background: var(--secondary-soft);
+  color: var(--secondary-strong);
+}
+
+.destructive-action {
+  color: #ff8f8f;
+}
+
+.destructive-action:hover {
+  border-color: rgba(255, 143, 143, 0.36);
+  background: rgba(255, 90, 90, 0.12);
+  color: #ffb0b0;
+}
+
 .field-grid {
   display: grid;
   gap: 12px;

@@ -1,12 +1,12 @@
 import { useDeferredValue, useState } from 'react'
-import { CalendarDays, Filter, ImagePlus, Search } from 'lucide-react'
+import { CalendarDays, Filter, ImagePlus, Pencil, Save, Search, Trash2, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { MEMORY_MOODS } from '../data/constants'
 import { createId, formatDate, sortByDateDesc } from '../lib/utils'
 import { RichTextEditor } from '../components/RichTextEditor'
 import { ImageUploadField } from '../components/ImageUploadField'
 
-function MemoryCard({ memory, index }) {
+function MemoryCard({ memory, index, onDelete, onEdit }) {
   const [imageFailed, setImageFailed] = useState(false)
   const mood = MEMORY_MOODS.find((item) => item.value === memory.mood)
 
@@ -34,7 +34,15 @@ function MemoryCard({ memory, index }) {
       <div className="memory-content">
         <div className="memory-meta-row">
           <span className="status-pill">{mood?.emoji} {mood?.label ?? 'Memory'}</span>
-          <span className="body-muted">{formatDate(memory.date)}</span>
+          <div className="card-actions">
+            <span className="body-muted">{formatDate(memory.date)}</span>
+            <button type="button" className="icon-action" aria-label={`Edit ${memory.title}`} onClick={() => onEdit(memory)}>
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button type="button" className="icon-action destructive-action" aria-label={`Delete ${memory.title}`} onClick={() => onDelete(memory.id)}>
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <h3>{memory.title}</h3>
         <div
@@ -46,7 +54,14 @@ function MemoryCard({ memory, index }) {
   )
 }
 
-export function MemoriesSection({ id, memories, onAddMemory, partners }) {
+export function MemoriesSection({
+  id,
+  memories,
+  onAddMemory,
+  onDeleteMemory,
+  onUpdateMemory,
+  partners,
+}) {
   const [form, setForm] = useState({
     title: '',
     date: '',
@@ -54,6 +69,7 @@ export function MemoriesSection({ id, memories, onAddMemory, partners }) {
     note: '',
     photoUrl: '',
   })
+  const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMood, setSelectedMood] = useState('all')
   const deferredSearchTerm = useDeferredValue(searchTerm)
@@ -86,15 +102,24 @@ export function MemoriesSection({ id, memories, onAddMemory, partners }) {
       return
     }
 
-    onAddMemory({
-      id: createId('memory'),
+    const nextMemory = {
       title: trimmedTitle,
       date: form.date,
       mood: form.mood,
       note: form.note.trim(),
       photoUrl: form.photoUrl.trim(),
-      createdAt: new Date().toISOString(),
-    })
+    }
+
+    if (editingId) {
+      onUpdateMemory(editingId, nextMemory)
+      setEditingId(null)
+    } else {
+      onAddMemory({
+        id: createId('memory'),
+        ...nextMemory,
+        createdAt: new Date().toISOString(),
+      })
+    }
 
     setForm({
       title: '',
@@ -102,6 +127,28 @@ export function MemoriesSection({ id, memories, onAddMemory, partners }) {
       mood: 'giddy',
       note: '',
       photoUrl: '',
+    })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setForm({
+      title: '',
+      date: '',
+      mood: 'giddy',
+      note: '',
+      photoUrl: '',
+    })
+  }
+
+  const editMemory = (memory) => {
+    setEditingId(memory.id)
+    setForm({
+      title: memory.title ?? '',
+      date: memory.date ?? '',
+      mood: memory.mood ?? 'giddy',
+      note: memory.note ?? '',
+      photoUrl: memory.photoUrl ?? '',
     })
   }
 
@@ -125,8 +172,8 @@ export function MemoriesSection({ id, memories, onAddMemory, partners }) {
         <form className="tool-panel" onSubmit={handleSubmit}>
           <div className="panel-head">
             <div>
-              <p className="eyebrow">New entry</p>
-              <h2>Add memory</h2>
+              <p className="eyebrow">{editingId ? 'Editing entry' : 'New entry'}</p>
+              <h2>{editingId ? 'Edit memory' : 'Add memory'}</h2>
             </div>
             <CalendarDays className="h-5 w-5 accent-text" />
           </div>
@@ -190,10 +237,17 @@ export function MemoriesSection({ id, memories, onAddMemory, partners }) {
             onChange={(value) => setForm((currentForm) => ({ ...currentForm, photoUrl: value }))}
           />
 
-          <button type="submit" className="primary-button">
-            <ImagePlus className="h-4 w-4" />
-            Save memory
-          </button>
+          <div className="form-actions">
+            <button type="submit" className="primary-button">
+              {editingId ? <Save className="h-4 w-4" /> : <ImagePlus className="h-4 w-4" />}
+              {editingId ? 'Save changes' : 'Save memory'}
+            </button>
+            {editingId ? (
+              <button type="button" className="secondary-button" onClick={cancelEdit}>
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            ) : null}
+          </div>
         </form>
 
         <div className="list-panel">
@@ -227,7 +281,16 @@ export function MemoriesSection({ id, memories, onAddMemory, partners }) {
           {filteredMemories.length ? (
             <div className="memory-grid">
               {filteredMemories.map((memory, index) => (
-                <MemoryCard key={memory.id} index={index} memory={memory} />
+                <MemoryCard
+                  key={memory.id}
+                  index={index}
+                  memory={memory}
+                  onEdit={editMemory}
+                  onDelete={(memoryId) => {
+                    onDeleteMemory(memoryId)
+                    if (editingId === memoryId) cancelEdit()
+                  }}
+                />
               ))}
             </div>
           ) : (
