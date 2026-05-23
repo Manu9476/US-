@@ -251,7 +251,8 @@ a {
 
 .sidebar-head,
 .sidebar-account-row,
-.settings-card-head {
+.settings-card-head,
+.legal-document-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -314,6 +315,11 @@ a {
   border-radius: 24px;
   background: var(--surface-tint);
   padding: 14px;
+}
+
+.sidebar-footer-stack {
+  display: grid;
+  gap: 12px;
 }
 
 .sidebar-avatar {
@@ -399,6 +405,42 @@ a {
 
 .sidebar-signout:hover {
   background: #fef2f2;
+}
+
+.sidebar-legal-footer {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.sidebar-legal-footer p {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.sidebar-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sidebar-legal-links button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  padding: 7px 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sidebar-legal-links button:hover {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 .auth-page {
@@ -1118,6 +1160,57 @@ a {
 .settings-stat span {
   color: var(--text-muted);
   font-size: 13px;
+}
+
+.legal-page {
+  padding-bottom: 80px;
+}
+
+.legal-document {
+  display: grid;
+  gap: 24px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+  padding: clamp(22px, 4vw, 44px);
+}
+
+.legal-document-head {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.legal-intro {
+  max-width: 860px;
+  color: var(--text-soft);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.legal-section-list {
+  display: grid;
+  gap: 18px;
+}
+
+.legal-clause {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface-tint);
+  padding: 20px;
+}
+
+.legal-clause h3 {
+  color: var(--accent-strong);
+}
+
+.legal-clause p {
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.85;
 }
 
 .workspace-grid {

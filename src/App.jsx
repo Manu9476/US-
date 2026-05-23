@@ -4,6 +4,7 @@ import {
   CalendarRange,
   CheckCircle2,
   Cloud,
+  FileText,
   Heart,
   Images,
   LayoutDashboard,
@@ -17,6 +18,7 @@ import {
   Save,
   Settings as SettingsIcon,
   Shuffle,
+  ShieldCheck,
   Sun,
   Target,
   Trash2,
@@ -52,6 +54,11 @@ const navItems = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
 
+const legalNavItems = [
+  { id: 'terms', label: 'Terms', icon: FileText },
+  { id: 'privacy', label: 'Privacy', icon: ShieldCheck },
+]
+
 const initialProfile = { one: 'Partner One', two: 'Partner Two', since: '2024-01-01', photoUrl: '' }
 const dateIdeas = [
   'Dinner at a new place nearby',
@@ -65,6 +72,177 @@ const timelineMoodMap = {
   romantic: 'giddy',
   adventure: 'wild',
   cozy: 'cozy',
+}
+
+const legalDocuments = {
+  terms: {
+    eyebrow: 'Terms',
+    title: 'Terms of Use',
+    summary:
+      'An intentionally long, formal, and slightly exhausting set of house rules for using Us+. This is product policy copy and not a replacement for lawyer-reviewed legal documents.',
+    updated: 'May 23, 2026',
+    sections: [
+      {
+        title: '1. Acceptance of these terms',
+        body:
+          'By opening, browsing, signing in to, storing information inside, uploading photos to, writing notes in, or otherwise using Us+, you agree to behave as though you have read every single sentence of these Terms, even the parts that feel like they were written by a committee trapped in a conference room with unlimited coffee. If you do not agree, your remedy is to stop using the application, close the tab, and maybe go drink water.',
+      },
+      {
+        title: '2. Purpose of the service',
+        body:
+          'Us+ is intended to be a private digital space for a couple to organize memories, dates, notes, shared goals, photos, and small emotional artifacts. It is not a bank, therapist, lawyer, emergency service, medical tool, government registry, official relationship certification authority, or replacement for actually talking kindly to each other when something matters.',
+      },
+      {
+        title: '3. Shared account responsibility',
+        body:
+          'A shared couple account means both people using the same login may access the same stored content. You are responsible for deciding who knows the email and password, who may open the account, who may upload or delete things, and whether sharing those credentials is emotionally wise, practically wise, or likely to cause a dramatic conversation at 1:17 AM.',
+      },
+      {
+        title: '4. Content you add',
+        body:
+          'You keep ownership of the memories, notes, photos, plans, song links, and other content you add to Us+. By uploading or saving content, you give the app permission to store, display, sync, process, and retrieve that content for the limited purpose of making the product work across your signed-in devices.',
+      },
+      {
+        title: '5. Content standards',
+        body:
+          'You agree not to upload content that is unlawful, abusive, harassing, invasive, malicious, exploitative, or intentionally harmful. You also agree not to use the app to store secrets that would create serious risk if viewed by the other account holder, because a shared love space is a charming idea but not a classified evidence locker.',
+      },
+      {
+        title: '6. Photos and uploads',
+        body:
+          'Photos uploaded through Us+ may be stored through the configured backend storage service and displayed wherever the app expects that photo to appear, including the profile, gallery, memory cards, date plans, or notes. You are responsible for making sure you have the right to upload the photo and that the people in the photo would not be reasonably furious about it being stored there.',
+      },
+      {
+        title: '7. Local and cloud behavior',
+        body:
+          'When cloud sync is configured and you are signed in, Us+ attempts to store and retrieve your workspace data from the backend so different devices can show matching information. When cloud sync is not available, interrupted, misconfigured, or otherwise having a tiny technological tantrum, some information may remain local to the device until sync works again.',
+      },
+      {
+        title: '8. Availability',
+        body:
+          'Us+ may be unavailable, slow, interrupted, redesigned, redeployed, updated, or temporarily confused. We do not promise that the app will be available every second of every day, that all browser extensions will behave themselves, or that every network request will glide through the internet like a swan.',
+      },
+      {
+        title: '9. No warranty',
+        body:
+          'The app is provided as is and as available, without warranties of perfection, romance, uptime, relationship success, permanent storage, flawless syncing, bug-free rendering, or universal emotional satisfaction. Use it because it is useful and lovely, not because a paragraph promised it would become legally magical.',
+      },
+      {
+        title: '10. Limitation of liability',
+        body:
+          'To the fullest extent allowed by applicable law, Us+, its creator, maintainers, helpers, deployers, and enthusiastic future refactorers will not be responsible for indirect, incidental, consequential, special, exemplary, emotional, nostalgic, or unusually poetic damages arising from your use of the app.',
+      },
+      {
+        title: '11. Account security',
+        body:
+          'You should use a strong password, avoid sharing it outside the intended couple account, and sign out on devices you do not control. If someone else gains access because credentials were shared, guessed, saved in a suspicious browser, photographed on a sticky note, or whispered to the wrong person, that is outside the app’s control.',
+      },
+      {
+        title: '12. Changes to the service',
+        body:
+          'Features may be added, changed, renamed, moved into sidebars, polished, simplified, expanded, made prettier, or removed. The app may evolve from a tiny romantic dashboard into a more structured private workspace, and continued use after changes means you accept the updated experience.',
+      },
+      {
+        title: '13. Termination and deletion',
+        body:
+          'You may stop using the app at any time. Depending on how the backend is configured, deleting stored data may require deleting entries inside the app, clearing local storage, removing uploaded files, or deleting the backend account or workspace data from the service provider dashboard.',
+      },
+      {
+        title: '14. The very long clause about reasonable expectations',
+        body:
+          'You agree to use reasonable judgment when relying on a small web app built for memories and planning. If a date plan disappears, a note is edited, a song link fails, a photo loads slowly, or a counter seems emotionally dramatic, you agree that the correct first response is calm troubleshooting rather than declaring the entire internet ruined.',
+      },
+      {
+        title: '15. Contact and creator credit',
+        body:
+          'Us+ was created by Manu. Any questions, improvement ideas, bug reports, compliments, suspiciously specific complaints, or requests for even longer policy language should be directed through the channel where the app is being built or maintained.',
+      },
+    ],
+  },
+  privacy: {
+    eyebrow: 'Privacy',
+    title: 'Privacy Policy',
+    summary:
+      'A very long explanation of what Us+ may store, why it stores it, and how the shared account model works. This is product policy copy and not jurisdiction-specific legal advice.',
+    updated: 'May 23, 2026',
+    sections: [
+      {
+        title: '1. Overview',
+        body:
+          'Us+ is designed to store private couple content such as names, relationship start date, memories, uploaded photos, date plans, goals, notes, and playlist links. The whole point is that both signed-in devices can see the same information, which means privacy depends on the shared account being used only by the intended people.',
+      },
+      {
+        title: '2. Information you provide directly',
+        body:
+          'The app may store partner names, the relationship start date, written memory titles, memory dates, mood selections, rich text notes, date locations, goal progress, surprise note content, music titles, artists, external links, and any other text you type into fields that look like they are asking you to type something.',
+      },
+      {
+        title: '3. Photos and media',
+        body:
+          'When you upload images, those images may be stored in the configured storage bucket and referenced by URL inside your workspace data. The app uses those images to display profile pictures, gallery entries, memory images, date photos, and note attachments, which is a fancy way of saying: if you upload it, the app may show it where you asked it to show it.',
+      },
+      {
+        title: '4. Account information',
+        body:
+          'When Supabase authentication or another backend authentication provider is connected, your account email and authentication session information may be processed by that provider. Us+ displays the signed-in email in the sidebar so the current user can tell which shared account is active.',
+      },
+      {
+        title: '5. Local storage',
+        body:
+          'The app may use browser localStorage to keep the interface responsive, preserve local fallback data, remember app preferences, or continue functioning when cloud sync is not configured. Local storage lives in the browser on the device, which means clearing browser data may remove local-only information.',
+      },
+      {
+        title: '6. Cloud sync',
+        body:
+          'When cloud sync is configured, Us+ may save workspace data to a backend database so multiple devices signed into the same account can show identical information. This includes profile data, timeline entries, date plans, goals, notes, playlist entries, and URLs pointing to uploaded photos.',
+      },
+      {
+        title: '7. Why information is used',
+        body:
+          'Information is used to operate the app, render the interface, sync data between devices, show the gallery, count days together, sort entries by date, display notes, manage uploads, and generally prevent the app from being an empty white rectangle with good intentions but no memory.',
+      },
+      {
+        title: '8. Sharing model',
+        body:
+          'Us+ is not built around separate private inboxes for each partner unless that is later implemented. The current shared account model means anyone with access to the same account may be able to see, edit, open, delete, or otherwise interact with the same couple workspace content.',
+      },
+      {
+        title: '9. Backend providers',
+        body:
+          'Data may be processed by the backend services configured for the deployment, such as authentication, database, hosting, and object storage providers. Those providers may maintain their own infrastructure, logs, security systems, retention practices, and policy documents that are much longer than this one, which is impressive and mildly alarming.',
+      },
+      {
+        title: '10. Security',
+        body:
+          'The app uses access controls provided by the configured backend, such as authentication and row-level security policies, to keep each account’s workspace separate. No system is perfectly secure, so you should still use strong passwords, avoid suspicious devices, and refrain from uploading content that would cause major harm if exposed.',
+      },
+      {
+        title: '11. Retention',
+        body:
+          'Content may remain stored until it is deleted through the app, removed from backend storage, overwritten by sync, cleared from local storage, or deleted by a project administrator. Backups, caches, logs, and provider-level retention systems may persist for some time depending on the backend provider’s configuration.',
+      },
+      {
+        title: '12. Children and sensitive use',
+        body:
+          'Us+ is intended for people who can responsibly manage a private shared account. It should not be used to collect information from children, store regulated medical details, preserve government secrets, hold emergency plans as the only source of truth, or manage anything that requires a professional compliance department wearing serious shoes.',
+      },
+      {
+        title: '13. Your choices',
+        body:
+          'You can choose what to add, edit, or remove. You can avoid uploading photos, use initials instead of full names, delete entries you no longer want, sign out from the sidebar, clear local browser data, or manage/delete backend data through the service provider dashboard if you control the project.',
+      },
+      {
+        title: '14. Changes to this policy',
+        body:
+          'This Privacy Policy may change when features change, the backend changes, the app becomes more ambitious, or someone decides the current wording is not sufficiently exhausting. Continued use after updates means you understand the updated policy applies to future use.',
+      },
+      {
+        title: '15. Created by Manu',
+        body:
+          'Us+ was created by Manu as a private, modern couple workspace. The creator credit appears in the app footer because products should have a little signature, and because hiding authorship after all this CSS would be rude.',
+      },
+    ],
+  },
 }
 
 function PageHeader({ eyebrow, title, summary }) {
@@ -128,6 +306,23 @@ function SidebarAccount({ profile, sync }) {
           Sign out
         </button>
       ) : null}
+    </div>
+  )
+}
+
+function SidebarLegalFooter({ onSelect }) {
+  const year = new Date().getFullYear()
+
+  return (
+    <div className="sidebar-legal-footer">
+      <p>Copyright {year} Us+. Created by Manu.</p>
+      <div className="sidebar-legal-links">
+        {legalNavItems.map((item) => (
+          <button key={item.id} type="button" onClick={() => onSelect(item.id)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -261,6 +456,10 @@ function App() {
 
   const topDream = useMemo(() => [...dreams].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))[0], [dreams])
   const isLightTheme = true
+  const activeLabel =
+    navItems.find((item) => item.id === tab)?.label ||
+    legalNavItems.find((item) => item.id === tab)?.label ||
+    'Us+'
   const galleryItems = useMemo(() => {
     const photos = []
 
@@ -384,7 +583,10 @@ function App() {
           })}
         </nav>
 
-        <SidebarAccount profile={profile} sync={sync} />
+        <div className="sidebar-footer-stack">
+          <SidebarAccount profile={profile} sync={sync} />
+          <SidebarLegalFooter onSelect={selectTab} />
+        </div>
       </aside>
 
       <div className="app-content">
@@ -395,7 +597,7 @@ function App() {
 
           <div className="topbar-title">
             <p className="eyebrow">Private space</p>
-            <h2>{navItems.find((item) => item.id === tab)?.label ?? 'Us+'}</h2>
+            <h2>{activeLabel}</h2>
           </div>
 
           <div className="header-actions">
@@ -506,6 +708,8 @@ function App() {
             sync={sync}
           />
         )}
+        {tab === 'terms' && <LegalSection document={legalDocuments.terms} />}
+        {tab === 'privacy' && <LegalSection document={legalDocuments.privacy} />}
         </main>
       </div>
     </div>
@@ -783,6 +987,42 @@ function SettingsSection({ counts, isLightTheme, setTheme, sync }) {
           </div>
         </article>
       </div>
+    </section>
+  )
+}
+
+function LegalSection({ document }) {
+  return (
+    <section className="app-page legal-page">
+      <PageHeader
+        eyebrow={document.eyebrow}
+        title={document.title}
+        summary={document.summary}
+      />
+
+      <article className="legal-document">
+        <div className="legal-document-head">
+          <div>
+            <p className="eyebrow">Last updated</p>
+            <h2>{document.updated}</h2>
+          </div>
+          <span className="status-pill">Annoyingly long</span>
+        </div>
+
+        <p className="legal-intro">
+          Please enjoy this deliberately extensive policy page. It is written to feel like the long, formal pages people
+          click past on websites, except it is still readable enough that nobody has to call a translator.
+        </p>
+
+        <div className="legal-section-list">
+          {document.sections.map((section) => (
+            <section key={section.title} className="legal-clause">
+              <h3>{section.title}</h3>
+              <p>{section.body}</p>
+            </section>
+          ))}
+        </div>
+      </article>
     </section>
   )
 }
