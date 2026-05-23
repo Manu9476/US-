@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BookOpenText,
   CalendarRange,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Cloud,
   FileText,
@@ -22,6 +24,7 @@ import {
   Sun,
   Target,
   Trash2,
+  Upload,
   User,
   X,
 } from 'lucide-react'
@@ -486,7 +489,11 @@ function App() {
     legalNavItems.find((item) => item.id === tab)?.label ||
     'Us+'
   const galleryItems = useMemo(() => {
-    return [...gallery].sort((a, b) => new Date(b.date || b.createdAt || 0).getTime() - new Date(a.date || a.createdAt || 0).getTime())
+    return [...gallery].sort(
+      (a, b) =>
+        new Date(b.uploadedAt || b.createdAt || b.date || 0).getTime() -
+        new Date(a.uploadedAt || a.createdAt || a.date || 0).getTime(),
+    )
   }, [gallery])
 
   const dashboardReminders = useMemo(() => {
@@ -918,129 +925,143 @@ function ReminderPanel({ reminders, onOpenTab }) {
 }
 
 function GallerySection({ items, setGallery, onUploadPhoto }) {
-  const [form, setForm] = useState({ title: '', date: '', caption: '', photoUrl: '' })
-  const [editingId, setEditingId] = useState(null)
+  const inputRef = useRef(null)
+  const touchStartX = useRef(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [activeIndex, setActiveIndex] = useState(null)
 
-  const resetForm = () => {
-    setForm({ title: '', date: '', caption: '', photoUrl: '' })
-    setEditingId(null)
-  }
+  const activePhoto = activeIndex === null ? null : items[activeIndex]
 
-  const savePhoto = (event) => {
-    event.preventDefault()
-    if (!form.title.trim() || !form.photoUrl.trim()) return
+  const addPhotos = async (files) => {
+    const imageFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/'))
+    if (!imageFiles.length) return
 
-    const nextPhoto = {
-      title: form.title.trim(),
-      date: form.date,
-      caption: form.caption.trim(),
-      photoUrl: form.photoUrl.trim(),
-    }
+    try {
+      setUploadError('')
+      setIsUploading(true)
+      const uploadedPhotos = []
 
-    if (editingId) {
-      setGallery((photos) =>
-        photos.map((photo) =>
-          photo.id === editingId
-            ? { ...photo, ...nextPhoto, updatedAt: new Date().toISOString() }
-            : photo,
-        ),
-      )
-    } else {
-      setGallery((photos) => [
-        {
+      for (const file of imageFiles) {
+        const uploadedAt = new Date().toISOString()
+        const photoUrl = await onUploadPhoto(file)
+
+        uploadedPhotos.push({
           id: createId('gallery'),
-          ...nextPhoto,
-          createdAt: new Date().toISOString(),
-        },
-        ...photos,
-      ])
-    }
+          photoUrl,
+          uploadedAt,
+          createdAt: uploadedAt,
+          fileName: file.name,
+        })
+      }
 
-    resetForm()
+      setGallery((photos) => [...uploadedPhotos, ...photos])
+    } catch (error) {
+      setUploadError(error.message || 'Photo upload failed.')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
-  const editPhoto = (photo) => {
-    setEditingId(photo.id)
-    setForm({
-      title: photo.title ?? '',
-      date: photo.date ?? '',
-      caption: photo.caption ?? '',
-      photoUrl: photo.photoUrl ?? '',
+  const deletePhoto = (photoId) => {
+    setGallery((photos) => photos.filter((photo) => photo.id !== photoId))
+    setActiveIndex((currentIndex) => {
+      if (currentIndex === null) return null
+      const nextLength = items.length - 1
+      return nextLength <= 0 ? null : Math.min(currentIndex, nextLength - 1)
     })
   }
+
+  const showPrevious = () => {
+    setActiveIndex((currentIndex) =>
+      currentIndex === null ? 0 : (currentIndex - 1 + items.length) % items.length,
+    )
+  }
+
+  const showNext = () => {
+    setActiveIndex((currentIndex) =>
+      currentIndex === null ? 0 : (currentIndex + 1) % items.length,
+    )
+  }
+
+  useEffect(() => {
+    if (!activePhoto) return undefined
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setActiveIndex(null)
+      if (event.key === 'ArrowLeft') {
+        setActiveIndex((currentIndex) =>
+          currentIndex === null ? 0 : (currentIndex - 1 + items.length) % items.length,
+        )
+      }
+      if (event.key === 'ArrowRight') {
+        setActiveIndex((currentIndex) =>
+          currentIndex === null ? 0 : (currentIndex + 1) % items.length,
+        )
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activePhoto, items.length])
 
   return (
     <section className="app-page">
       <PageHeader
         eyebrow="Gallery"
-        title="Our photo gallery"
-        summary="Upload, arrange, edit, and revisit the photos that belong to your shared space."
+        title="Our photos"
+        summary="A clean shared album. Upload photos, open them fullscreen, and swipe through the moments."
       />
 
       <div className="gallery-workspace">
-        <form className="tool-panel gallery-uploader" onSubmit={savePhoto}>
-          <div className="panel-head">
+        <div
+          className="gallery-upload-strip"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={async (event) => {
+            event.preventDefault()
+            await addPhotos(event.dataTransfer.files)
+          }}
+        >
+          <div className="gallery-upload-copy">
+            <span className="gallery-upload-icon">
+              <Images className="h-4 w-4" />
+            </span>
             <div>
-              <p className="eyebrow">{editingId ? 'Editing photo' : 'New photo'}</p>
-              <h2>{editingId ? 'Update gallery photo' : 'Add to gallery'}</h2>
+              <p className="eyebrow">Gallery</p>
+              <h2>Add photos</h2>
+              <p className="body-muted">Upload dates are saved automatically.</p>
             </div>
-            <Images className="h-5 w-5 accent-text" />
           </div>
 
-          <div className="field-grid">
-            <label>
-              <span>Photo title</span>
-              <input
-                className="input-field"
-                placeholder="Beach afternoon"
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Photo date</span>
-              <input
-                type="date"
-                className="input-field"
-                value={form.date}
-                onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Caption</span>
-              <textarea
-                className="input-field gallery-caption-input"
-                placeholder="What should this photo always remind you of?"
-                value={form.caption}
-                onChange={(event) => setForm((current) => ({ ...current, caption: event.target.value }))}
-              />
-            </label>
-          </div>
-
-          <ImageUploadField
-            label="Upload photo"
-            value={form.photoUrl}
-            onChange={(value) => setForm((current) => ({ ...current, photoUrl: value }))}
-            onUploadFile={onUploadPhoto}
-          />
-
-          <div className="form-actions">
-            <button className="primary-button" type="submit">
-              {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {editingId ? 'Save photo' : 'Add photo'}
+          <div className="gallery-upload-actions">
+            <button
+              type="button"
+              className="primary-button"
+              disabled={isUploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              {isUploading ? 'Uploading...' : 'Add photo'}
             </button>
-            {editingId ? (
-              <button type="button" className="secondary-button" onClick={resetForm}>
-                <X className="h-4 w-4" /> Cancel
-              </button>
-            ) : null}
+            <input
+              ref={inputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              multiple
+              onChange={async (event) => {
+                await addPhotos(event.target.files)
+                event.target.value = ''
+              }}
+            />
           </div>
-        </form>
+          {uploadError ? <p className="field-error">{uploadError}</p> : null}
+        </div>
 
         <div className="list-panel gallery-wall-panel">
           <div className="gallery-wall-head">
             <div>
-              <p className="eyebrow">Arranged album</p>
+              <p className="eyebrow">Photo wall</p>
               <h2>{items.length} {items.length === 1 ? 'photo' : 'photos'}</h2>
             </div>
             <span className="status-pill">Newest first</span>
@@ -1049,42 +1070,95 @@ function GallerySection({ items, setGallery, onUploadPhoto }) {
           {items.length ? (
             <div className="gallery-grid">
               {items.map((item, index) => (
-                <article key={item.id} className={`gallery-card ${index === 0 ? 'gallery-card-featured' : ''}`}>
-                  <img src={item.photoUrl} alt={item.title} className="gallery-image" loading="lazy" />
-                  <div className="gallery-card-meta">
-                    <span className="status-pill">{item.date ? formatDate(item.date) : 'Undated'}</span>
-                    <div>
-                      <h3>{item.title}</h3>
-                      {item.caption ? <p className="body-muted">{item.caption}</p> : null}
-                    </div>
-                    <div className="card-actions">
-                      <button type="button" className="icon-action" aria-label={`Edit ${item.title}`} onClick={() => editPhoto(item)}>
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-action destructive-action"
-                        aria-label={`Delete ${item.title}`}
-                        onClick={() => {
-                          setGallery((photos) => photos.filter((photo) => photo.id !== item.id))
-                          if (editingId === item.id) resetForm()
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                <button
+                  key={item.id}
+                  type="button"
+                  className="gallery-card"
+                  onClick={() => setActiveIndex(index)}
+                >
+                  <img
+                    src={item.photoUrl}
+                    alt={`Gallery photo uploaded ${formatDate(item.uploadedAt || item.createdAt || item.date)}`}
+                    className="gallery-image"
+                    loading="lazy"
+                  />
+                  <span className="gallery-date-chip">
+                    {formatDate(item.uploadedAt || item.createdAt || item.date)}
+                  </span>
+                </button>
               ))}
             </div>
           ) : (
             <EmptyState
               title="No gallery photos yet"
-              text="Upload your first photo using the form. Your album will stay arranged newest first."
+              text="Use Add photo to build the album. No captions or extra form needed."
             />
           )}
         </div>
       </div>
+
+      {activePhoto ? (
+        <div
+          className="gallery-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo viewer"
+          onTouchStart={(event) => {
+            touchStartX.current = event.touches[0]?.clientX ?? null
+          }}
+          onTouchEnd={(event) => {
+            if (touchStartX.current === null) return
+            const endX = event.changedTouches[0]?.clientX ?? touchStartX.current
+            const distance = endX - touchStartX.current
+
+            if (Math.abs(distance) > 48) {
+              if (distance > 0) showPrevious()
+              else showNext()
+            }
+
+            touchStartX.current = null
+          }}
+        >
+          <div className="gallery-lightbox-top">
+            <div>
+              <p className="eyebrow">Uploaded</p>
+              <h2>{formatDate(activePhoto.uploadedAt || activePhoto.createdAt || activePhoto.date)}</h2>
+            </div>
+            <button type="button" className="icon-action" aria-label="Close photo viewer" onClick={() => setActiveIndex(null)}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="gallery-lightbox-stage">
+            {items.length > 1 ? (
+              <button type="button" className="gallery-lightbox-nav gallery-lightbox-prev" aria-label="Previous photo" onClick={showPrevious}>
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            ) : null}
+            <img
+              src={activePhoto.photoUrl}
+              alt={`Gallery photo uploaded ${formatDate(activePhoto.uploadedAt || activePhoto.createdAt || activePhoto.date)}`}
+              className="gallery-lightbox-image"
+            />
+            {items.length > 1 ? (
+              <button type="button" className="gallery-lightbox-nav gallery-lightbox-next" aria-label="Next photo" onClick={showNext}>
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            ) : null}
+          </div>
+
+          <div className="gallery-lightbox-bottom">
+            <span className="body-muted">{activeIndex + 1} of {items.length}</span>
+            <button
+              type="button"
+              className="secondary-button destructive-action"
+              onClick={() => deletePhoto(activePhoto.id)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete photo
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
