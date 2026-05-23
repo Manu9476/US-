@@ -405,76 +405,85 @@ function AccessibilityWidget({
       </button>
 
       {isOpen ? (
-        <aside className={`accessibility-panel ${settings.largeWidget ? 'accessibility-panel-large' : ''}`}>
-          <div className="accessibility-panel-head">
-            <div>
-              <p>Accessibility Menu</p>
-              <span>CTRL + U</span>
+        <div className="accessibility-layer">
+          <button
+            type="button"
+            className="accessibility-scrim"
+            aria-label="Close accessibility menu"
+            onClick={() => setIsOpen(false)}
+          />
+
+          <aside className={`accessibility-panel ${settings.largeWidget ? 'accessibility-panel-large' : ''}`}>
+            <div className="accessibility-panel-head">
+              <div>
+                <p>Accessibility Menu</p>
+                <span>CTRL + U</span>
+              </div>
+              <button type="button" aria-label="Close accessibility menu" onClick={() => setIsOpen(false)}>
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <button type="button" aria-label="Close accessibility menu" onClick={() => setIsOpen(false)}>
-              <X className="h-5 w-5" />
+
+            <div className="accessibility-demo-button">
+              <Info className="h-4 w-4" />
+              <span>Choose the view that feels best for you</span>
+            </div>
+
+            <label className="accessibility-switch-row">
+              <span>Oversized widget</span>
+              <input
+                type="checkbox"
+                checked={settings.largeWidget}
+                onChange={() => toggleSetting('largeWidget')}
+              />
+            </label>
+
+            {accessibilityOptionGroups.map((group, groupIndex) => (
+              <div className="accessibility-grid" key={groupIndex}>
+                {group.map((option) => {
+                  const Icon = option.icon
+                  const isActive =
+                    option.type === 'textAlign'
+                      ? settings.textAlign !== 'default'
+                      : option.type === 'saturation'
+                        ? settings.saturation !== 'normal'
+                        : Boolean(settings[option.key])
+                  const detail =
+                    option.type === 'textAlign'
+                      ? settings.textAlign
+                      : option.type === 'saturation'
+                        ? settings.saturation
+                        : isActive
+                          ? 'on'
+                          : 'off'
+
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      className={`accessibility-option ${isActive ? 'accessibility-option-active' : ''}`}
+                      aria-pressed={isActive}
+                      onClick={() => {
+                        if (option.type === 'textAlign') cycleTextAlign()
+                        else if (option.type === 'saturation') cycleSaturation()
+                        else toggleSetting(option.key)
+                      }}
+                    >
+                      <Icon className="h-7 w-7" />
+                      <span>{option.label}</span>
+                      <small>{detail}</small>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+
+            <button type="button" className="accessibility-reset" onClick={onReset}>
+              <RotateCcw className="h-4 w-4" />
+              Reset All Accessibility Settings
             </button>
-          </div>
-
-          <div className="accessibility-demo-button">
-            <Info className="h-4 w-4" />
-            <span>Choose the view that feels best for you</span>
-          </div>
-
-          <label className="accessibility-switch-row">
-            <span>Oversized widget</span>
-            <input
-              type="checkbox"
-              checked={settings.largeWidget}
-              onChange={() => toggleSetting('largeWidget')}
-            />
-          </label>
-
-          {accessibilityOptionGroups.map((group, groupIndex) => (
-            <div className="accessibility-grid" key={groupIndex}>
-              {group.map((option) => {
-                const Icon = option.icon
-                const isActive =
-                  option.type === 'textAlign'
-                    ? settings.textAlign !== 'default'
-                    : option.type === 'saturation'
-                      ? settings.saturation !== 'normal'
-                      : Boolean(settings[option.key])
-                const detail =
-                  option.type === 'textAlign'
-                    ? settings.textAlign
-                    : option.type === 'saturation'
-                      ? settings.saturation
-                      : isActive
-                        ? 'on'
-                        : 'off'
-
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    className={`accessibility-option ${isActive ? 'accessibility-option-active' : ''}`}
-                    aria-pressed={isActive}
-                    onClick={() => {
-                      if (option.type === 'textAlign') cycleTextAlign()
-                      else if (option.type === 'saturation') cycleSaturation()
-                      else toggleSetting(option.key)
-                    }}
-                  >
-                    <Icon className="h-7 w-7" />
-                    <span>{option.label}</span>
-                    <small>{detail}</small>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-
-          <button type="button" className="accessibility-reset" onClick={onReset}>
-            <RotateCcw className="h-4 w-4" />
-            Reset All Accessibility Settings
-          </button>
-        </aside>
+          </aside>
+        </div>
       ) : null}
     </div>
   )
