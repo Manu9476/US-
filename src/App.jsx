@@ -35,6 +35,7 @@ import { LOVE_QUOTES } from './data/constants'
 import { useLocalStorageState } from './hooks/useLocalStorageState'
 import { useNow } from './hooks/useNow'
 import { useSupabaseWorkspace } from './hooks/useSupabaseWorkspace'
+import { createImageThumbnail, createImageThumbnailFromUrl } from './lib/imageFiles'
 import {
   createId,
   formatDate,
@@ -944,11 +945,13 @@ function GallerySection({ items, setGallery, onUploadPhoto }) {
 
       for (const file of imageFiles) {
         const uploadedAt = new Date().toISOString()
+        const thumbUrl = await createImageThumbnail(file)
         const photoUrl = await onUploadPhoto(file)
 
         uploadedPhotos.push({
           id: createId('gallery'),
           photoUrl,
+          thumbUrl,
           uploadedAt,
           createdAt: uploadedAt,
           fileName: file.name,
@@ -1004,6 +1007,43 @@ function GallerySection({ items, setGallery, onUploadPhoto }) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [activePhoto, items.length])
+
+  useEffect(() => {
+    const photosWithoutThumbs = items
+      .filter((photo) => photo.photoUrl && !photo.thumbUrl)
+      .slice(0, 8)
+
+    if (!photosWithoutThumbs.length) return undefined
+
+    let isCancelled = false
+    const timeoutId = window.setTimeout(async () => {
+      for (const photo of photosWithoutThumbs) {
+        if (isCancelled) return
+
+        try {
+          const thumbUrl = await createImageThumbnailFromUrl(photo.photoUrl)
+          if (isCancelled) return
+
+          setGallery((photos) =>
+            photos.map((item) =>
+              item.id === photo.id ? { ...item, thumbUrl, optimizedAt: new Date().toISOString() } : item,
+            ),
+          )
+        } catch {
+          setGallery((photos) =>
+            photos.map((item) =>
+              item.id === photo.id ? { ...item, thumbUrl: item.photoUrl, optimizedAt: new Date().toISOString() } : item,
+            ),
+          )
+        }
+      }
+    }, 900)
+
+    return () => {
+      isCancelled = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [items, setGallery])
 
   return (
     <section className="app-page">
@@ -1077,9 +1117,10 @@ function GallerySection({ items, setGallery, onUploadPhoto }) {
                   onClick={() => setActiveIndex(index)}
                 >
                   <img
-                    src={item.photoUrl}
+                    src={item.thumbUrl || item.photoUrl}
                     alt={`Gallery photo uploaded ${formatDate(item.uploadedAt || item.createdAt || item.date)}`}
                     className="gallery-image"
+                    decoding="async"
                     loading="lazy"
                   />
                   <span className="gallery-date-chip">
