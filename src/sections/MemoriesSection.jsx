@@ -60,6 +60,7 @@ export function MemoriesSection({
   onAddMemory,
   onDeleteMemory,
   onUpdateMemory,
+  onUploadPhoto,
   partners,
 }) {
   const [form, setForm] = useState({
@@ -235,6 +236,7 @@ export function MemoriesSection({
             label="Photo"
             value={form.photoUrl}
             onChange={(value) => setForm((currentForm) => ({ ...currentForm, photoUrl: value }))}
+            onUploadFile={onUploadPhoto}
           />
 
           <div className="form-actions">

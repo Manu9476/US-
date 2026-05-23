@@ -19,9 +19,11 @@ import {
 } from 'lucide-react'
 import { ImageUploadField } from './components/ImageUploadField'
 import { RichTextEditor } from './components/RichTextEditor'
+import { SyncBadge, SyncPanel } from './components/SyncPanel'
 import { LOVE_QUOTES } from './data/constants'
 import { useLocalStorageState } from './hooks/useLocalStorageState'
 import { useNow } from './hooks/useNow'
+import { useSupabaseWorkspace } from './hooks/useSupabaseWorkspace'
 import {
   createId,
   formatDate,
@@ -56,14 +58,6 @@ const timelineMoodMap = {
   cozy: 'cozy',
 }
 
-const readImageAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-
 function PageHeader({ eyebrow, title, summary }) {
   return (
     <div className="page-header">
@@ -94,6 +88,20 @@ function App() {
   const [playlist, setPlaylist] = useLocalStorageState('us-plus-premium-playlist', [])
   const [theme, setTheme] = useLocalStorageState('us-plus-theme', 'dark')
   const [idea, setIdea] = useState(dateIdeas[0])
+  const sync = useSupabaseWorkspace({
+    profile,
+    timeline,
+    dates,
+    dreams,
+    notes,
+    playlist,
+    setProfile,
+    setTimeline,
+    setDates,
+    setDreams,
+    setNotes,
+    setPlaylist,
+  })
 
   const days = getDaysTogether(profile.since, now)
   const quote = LOVE_QUOTES[now.getDate() % LOVE_QUOTES.length]
@@ -150,6 +158,12 @@ function App() {
         </nav>
 
         <div className="header-actions">
+          <SyncBadge
+            isConfigured={sync.isConfigured}
+            session={sync.session}
+            syncStatus={sync.syncStatus}
+          />
+
           <button
             type="button"
             className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
@@ -180,6 +194,8 @@ function App() {
             timelineCount={timeline.length}
             notesCount={notes.length}
             setProfile={setProfile}
+            sync={sync}
+            uploadImage={sync.uploadImage}
           />
         )}
 
@@ -188,6 +204,7 @@ function App() {
             id="timeline"
             memories={timelineMemories}
             partners={{ partnerOne: profile.one, partnerTwo: profile.two }}
+            onUploadPhoto={sync.uploadImage}
             onAddMemory={(memory) =>
               setTimeline((items) => [
                 {
@@ -225,11 +242,12 @@ function App() {
             idea={idea}
             onShuffleIdea={() => setIdea(dateIdeas[Math.floor(Math.random() * dateIdeas.length)])}
             setDates={setDates}
+            onUploadPhoto={sync.uploadImage}
           />
         )}
 
         {tab === 'dream-board' && <GoalsSection dreams={dreams} setDreams={setDreams} />}
-        {tab === 'notes' && <NotesSection notes={notes} setNotes={setNotes} />}
+        {tab === 'notes' && <NotesSection notes={notes} setNotes={setNotes} onUploadPhoto={sync.uploadImage} />}
         {tab === 'playlist' && <MusicSection now={now} playlist={playlist} setPlaylist={setPlaylist} />}
       </main>
     </div>
@@ -245,8 +263,11 @@ function DashboardSection({
   timelineCount,
   notesCount,
   setProfile,
+  sync,
+  uploadImage,
 }) {
   const couplePhotoInputRef = useRef(null)
+  const [photoStatus, setPhotoStatus] = useState('')
 
   const handleCouplePhotoChange = async (event) => {
     const [file] = event.target.files || []
@@ -255,9 +276,16 @@ function DashboardSection({
       return
     }
 
-    const photoUrl = await readImageAsDataUrl(file)
-    setProfile((currentProfile) => ({ ...currentProfile, photoUrl }))
-    event.target.value = ''
+    try {
+      setPhotoStatus('Uploading picture...')
+      const photoUrl = await uploadImage(file)
+      setProfile((currentProfile) => ({ ...currentProfile, photoUrl }))
+      setPhotoStatus('')
+    } catch (error) {
+      setPhotoStatus(error.message || 'Picture upload failed.')
+    } finally {
+      event.target.value = ''
+    }
   }
 
   return (
@@ -278,9 +306,10 @@ function DashboardSection({
           <button
             type="button"
             className="couple-upload-button"
+            disabled={photoStatus === 'Uploading picture...'}
             onClick={() => couplePhotoInputRef.current?.click()}
           >
-            {profile.photoUrl ? 'Change picture' : 'Add picture'}
+            {photoStatus === 'Uploading picture...' ? 'Uploading' : profile.photoUrl ? 'Change picture' : 'Add picture'}
           </button>
           <input
             ref={couplePhotoInputRef}
@@ -293,8 +322,20 @@ function DashboardSection({
         <div className="couple-names">
           <h1>{profile.one} + {profile.two}</h1>
           <p className="body-muted">Together since {formatDate(profile.since)}</p>
+          {photoStatus && photoStatus !== 'Uploading picture...' ? <p className="field-error">{photoStatus}</p> : null}
         </div>
       </article>
+
+      <SyncPanel
+        authMessage={sync.authMessage}
+        isConfigured={sync.isConfigured}
+        session={sync.session}
+        signIn={sync.signIn}
+        signOut={sync.signOut}
+        signUp={sync.signUp}
+        syncMessage={sync.syncMessage}
+        syncStatus={sync.syncStatus}
+      />
 
       <PageHeader
         eyebrow="Dashboard"
@@ -352,6 +393,7 @@ function DashboardSection({
             label="Couple picture"
             value={profile.photoUrl ?? ''}
             onChange={(value) => setProfile((currentProfile) => ({ ...currentProfile, photoUrl: value }))}
+            onUploadFile={uploadImage}
           />
         </article>
 
@@ -390,7 +432,7 @@ function DashboardSection({
   )
 }
 
-function DateSection({ dates, setDates, idea, onShuffleIdea }) {
+function DateSection({ dates, setDates, idea, onShuffleIdea, onUploadPhoto }) {
   const [form, setForm] = useState({ title: '', when: '', place: '', note: '', photo: '' })
   const [editingId, setEditingId] = useState(null)
   const ordered = sortByDateAsc(dates, (item) => item.when)
@@ -448,7 +490,12 @@ function DateSection({ dates, setDates, idea, onShuffleIdea }) {
             <input className="input-field" placeholder="Location" value={form.place} onChange={(event) => setForm((value) => ({ ...value, place: event.target.value }))} />
           </div>
           <RichTextEditor label="Notes" value={form.note} onChange={(value) => setForm((current) => ({ ...current, note: value }))} placeholder="Details, timing, reservation info..." />
-          <ImageUploadField label="Photo" value={form.photo} onChange={(value) => setForm((current) => ({ ...current, photo: value }))} />
+          <ImageUploadField
+            label="Photo"
+            value={form.photo}
+            onChange={(value) => setForm((current) => ({ ...current, photo: value }))}
+            onUploadFile={onUploadPhoto}
+          />
           <div className="form-actions">
             <button className="primary-button" type="submit">
               {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -469,7 +516,7 @@ function DateSection({ dates, setDates, idea, onShuffleIdea }) {
                 <div className="item-card-header">
                   <div>
                     <h3>{item.title}</h3>
-                    <p className="body-muted">{formatDateTime(item.when)} · {item.place}</p>
+                    <p className="body-muted">{formatDateTime(item.when)} - {item.place}</p>
                   </div>
                   <div className="card-actions">
                     <CheckCircle2 className="h-5 w-5 accent-text" />
@@ -613,7 +660,7 @@ function GoalsSection({ dreams, setDreams }) {
   )
 }
 
-function NotesSection({ notes, setNotes }) {
+function NotesSection({ notes, setNotes, onUploadPhoto }) {
   const [form, setForm] = useState({ subject: '', message: '', photo: '', locked: true })
   const [editingId, setEditingId] = useState(null)
 
@@ -663,7 +710,12 @@ function NotesSection({ notes, setNotes }) {
             <span>Keep hidden until opened</span>
           </label>
           <RichTextEditor label="Message" value={form.message} onChange={(value) => setForm((current) => ({ ...current, message: value }))} placeholder="Write the note..." />
-          <ImageUploadField label="Attachment" value={form.photo} onChange={(value) => setForm((current) => ({ ...current, photo: value }))} />
+          <ImageUploadField
+            label="Attachment"
+            value={form.photo}
+            onChange={(value) => setForm((current) => ({ ...current, photo: value }))}
+            onUploadFile={onUploadPhoto}
+          />
           <div className="form-actions">
             <button className="primary-button" type="submit">
               {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}

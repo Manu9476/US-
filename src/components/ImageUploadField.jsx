@@ -1,23 +1,27 @@
 import { ImagePlus, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { readImageAsDataUrl } from '../lib/imageFiles'
 
-const readAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-
-export function ImageUploadField({ label, value, onChange }) {
+export function ImageUploadField({ label, value, onChange, onUploadFile }) {
   const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState('')
   const inputRef = useRef(null)
 
   const handleFiles = async (files) => {
     const [file] = files || []
     if (!file || !file.type.startsWith('image/')) return
-    const dataUrl = await readAsDataUrl(file)
-    onChange(dataUrl)
+
+    try {
+      setError('')
+      setIsUploading(true)
+      const nextValue = onUploadFile ? await onUploadFile(file) : await readImageAsDataUrl(file)
+      onChange(nextValue)
+    } catch (uploadError) {
+      setError(uploadError.message || 'Image upload failed.')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -45,8 +49,13 @@ export function ImageUploadField({ label, value, onChange }) {
           </div>
         )}
         <div className="mt-3 flex gap-2">
-          <button type="button" className="secondary-button" onClick={() => inputRef.current?.click()}>
-            <Upload className="h-4 w-4" /> Choose
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={isUploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4" /> {isUploading ? 'Uploading...' : 'Choose'}
           </button>
           {value && (
             <button type="button" className="secondary-button" onClick={() => onChange('')}>
@@ -54,12 +63,16 @@ export function ImageUploadField({ label, value, onChange }) {
             </button>
           )}
         </div>
+        {error ? <p className="field-error">{error}</p> : null}
         <input
           ref={inputRef}
           type="file"
           className="hidden"
           accept="image/*"
-          onChange={async (event) => handleFiles(event.target.files)}
+          onChange={async (event) => {
+            await handleFiles(event.target.files)
+            event.target.value = ''
+          }}
         />
       </div>
     </div>
