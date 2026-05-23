@@ -1258,9 +1258,12 @@ a {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
+  height: 100svh;
+  overflow: hidden;
   background: rgba(9, 9, 14, 0.9);
   padding: 22px;
   backdrop-filter: blur(18px);
+  overscroll-behavior: contain;
 }
 
 .gallery-lightbox-top,
@@ -1281,12 +1284,17 @@ a {
   position: relative;
   display: grid;
   place-items: center;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .gallery-lightbox-image {
-  max-width: min(1100px, 100%);
-  max-height: 100%;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(1100px, calc(100vw - 150px));
+  max-height: calc(100svh - 190px);
   border-radius: 24px;
   object-fit: contain;
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.38);
@@ -2058,6 +2066,8 @@ a {
   }
 
   .gallery-lightbox-image {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100svh - 210px);
     border-radius: 18px;
   }
 
