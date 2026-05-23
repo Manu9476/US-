@@ -77,6 +77,88 @@ function EmptyState({ title, text }) {
   )
 }
 
+function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
+  return (
+    <div className="auth-page">
+      <div className="auth-orb auth-orb-orange" />
+      <div className="auth-orb auth-orb-purple" />
+
+      <header className="auth-header">
+        <div className="brand-mark auth-brand">
+          <span className="brand-icon">
+            <Heart className="h-4 w-4" />
+          </span>
+          <span>Us+</span>
+        </div>
+
+        <button
+          type="button"
+          className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
+          aria-label={`Switch to ${isLightTheme ? 'dark' : 'light'} theme`}
+          aria-pressed={isLightTheme}
+          onClick={() => setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))}
+        >
+          <span className="theme-toggle-icon">
+            {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          </span>
+          <span>{isLightTheme ? 'Light' : 'Dark'}</span>
+        </button>
+      </header>
+
+      <main className="auth-shell">
+        <section className="auth-copy">
+          <p className="eyebrow">Private couple space</p>
+          <h1>Sign in to open your shared Us+ world.</h1>
+          <p className="page-summary">
+            Your memories, photos, notes, dates, goals, and playlist stay behind one shared account so both devices show the same story.
+          </p>
+
+          <div className="auth-feature-grid">
+            <div className="auth-feature-card">
+              <span>01</span>
+              <p>One couple account for both of you.</p>
+            </div>
+            <div className="auth-feature-card">
+              <span>02</span>
+              <p>Cloud photos stored through Supabase.</p>
+            </div>
+            <div className="auth-feature-card">
+              <span>03</span>
+              <p>Identical updates across every device.</p>
+            </div>
+          </div>
+        </section>
+
+        {isLoading ? (
+          <article className="sync-panel auth-panel-card">
+            <div className="sync-icon">
+              <Heart className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="eyebrow">Opening</p>
+              <h2>Checking your private session</h2>
+              <p className="body-muted">One tiny second while Us+ finds out if you are already signed in.</p>
+            </div>
+          </article>
+        ) : (
+          <div className="auth-panel-card">
+            <SyncPanel
+              authMessage={sync.authMessage}
+              isConfigured={sync.isConfigured}
+              session={sync.session}
+              signIn={sync.signIn}
+              signOut={sync.signOut}
+              signUp={sync.signUp}
+              syncMessage={sync.syncMessage}
+              syncStatus={sync.syncStatus}
+            />
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
 function App() {
   const now = useNow(1000)
   const [tab, setTab] = useState('home')
@@ -127,6 +209,27 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  if (sync.isConfigured && !sync.authReady) {
+    return (
+      <AuthAccessPage
+        isLightTheme={isLightTheme}
+        isLoading
+        setTheme={setTheme}
+        sync={sync}
+      />
+    )
+  }
+
+  if (sync.isConfigured && !sync.session) {
+    return (
+      <AuthAccessPage
+        isLightTheme={isLightTheme}
+        setTheme={setTheme}
+        sync={sync}
+      />
+    )
+  }
 
   return (
     <div className="app-ui">
