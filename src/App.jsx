@@ -1,25 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BookOpenText,
   CalendarRange,
   CheckCircle2,
+  Cloud,
   Heart,
+  Images,
   LayoutDashboard,
+  LogOut,
   MessageSquareText,
+  Menu,
   Moon,
   Music4,
   Pencil,
   Plus,
   Save,
+  Settings as SettingsIcon,
   Shuffle,
   Sun,
   Target,
   Trash2,
+  User,
   X,
 } from 'lucide-react'
 import { ImageUploadField } from './components/ImageUploadField'
 import { RichTextEditor } from './components/RichTextEditor'
-import { SyncBadge, SyncPanel } from './components/SyncPanel'
+import { SyncPanel } from './components/SyncPanel'
 import { LOVE_QUOTES } from './data/constants'
 import { useLocalStorageState } from './hooks/useLocalStorageState'
 import { useNow } from './hooks/useNow'
@@ -36,11 +42,14 @@ import { MemoriesSection } from './sections/MemoriesSection'
 
 const navItems = [
   { id: 'home', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'gallery', label: 'Gallery', icon: Images },
   { id: 'timeline', label: 'Story', icon: BookOpenText },
   { id: 'date-lab', label: 'Dates', icon: CalendarRange },
   { id: 'dream-board', label: 'Goals', icon: Target },
   { id: 'notes', label: 'Notes', icon: MessageSquareText },
   { id: 'playlist', label: 'Music', icon: Music4 },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 const initialProfile = { one: 'Partner One', two: 'Partner Two', since: '2024-01-01', photoUrl: '' }
@@ -77,6 +86,52 @@ function EmptyState({ title, text }) {
   )
 }
 
+function getSyncLabel(syncStatus) {
+  if (syncStatus === 'saving') return 'Saving changes'
+  if (syncStatus === 'synced') return 'Synced'
+  if (syncStatus === 'loading' || syncStatus === 'checking') return 'Loading sync'
+  if (syncStatus === 'error') return 'Needs attention'
+  if (syncStatus === 'signed-out') return 'Signed out'
+  return 'Local mode'
+}
+
+function SidebarAccount({ profile, sync }) {
+  const accountEmail = sync.session?.user?.email
+
+  return (
+    <div className="sidebar-account">
+      <div className="sidebar-account-row">
+        <div className="sidebar-avatar">
+          {profile.photoUrl ? (
+            <img src={profile.photoUrl} alt={`${profile.one} and ${profile.two}`} />
+          ) : (
+            <Heart className="h-4 w-4" />
+          )}
+        </div>
+        <div>
+          <p className="sidebar-account-name">{profile.one} + {profile.two}</p>
+          <p className="sidebar-account-email">{accountEmail || 'Local workspace'}</p>
+        </div>
+      </div>
+
+      <div className="sidebar-sync-card">
+        <Cloud className="h-4 w-4" />
+        <div>
+          <span>{getSyncLabel(sync.syncStatus)}</span>
+          <p>{sync.syncMessage}</p>
+        </div>
+      </div>
+
+      {sync.session?.user ? (
+        <button type="button" className="sidebar-signout" onClick={sync.signOut}>
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
 function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
   return (
     <div className="auth-page">
@@ -94,9 +149,9 @@ function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
         <button
           type="button"
           className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
-          aria-label={`Switch to ${isLightTheme ? 'dark' : 'light'} theme`}
+          aria-label="Light theme active"
           aria-pressed={isLightTheme}
-          onClick={() => setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))}
+          onClick={() => setTheme('light')}
         >
           <span className="theme-toggle-icon">
             {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -162,13 +217,14 @@ function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
 function App() {
   const now = useNow(1000)
   const [tab, setTab] = useState('home')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [profile, setProfile] = useLocalStorageState('us-plus-premium-profile', initialProfile)
   const [timeline, setTimeline] = useLocalStorageState('us-plus-premium-timeline', [])
   const [dates, setDates] = useLocalStorageState('us-plus-premium-dates', [])
   const [dreams, setDreams] = useLocalStorageState('us-plus-premium-dreams', [])
   const [notes, setNotes] = useLocalStorageState('us-plus-premium-vault', [])
   const [playlist, setPlaylist] = useLocalStorageState('us-plus-premium-playlist', [])
-  const [theme, setTheme] = useLocalStorageState('us-plus-theme', 'dark')
+  const [, setTheme] = useLocalStorageState('us-plus-theme', 'light')
   const [idea, setIdea] = useState(dateIdeas[0])
   const sync = useSupabaseWorkspace({
     profile,
@@ -204,11 +260,67 @@ function App() {
   )
 
   const topDream = useMemo(() => [...dreams].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))[0], [dreams])
-  const isLightTheme = theme === 'light'
+  const isLightTheme = true
+  const galleryItems = useMemo(() => {
+    const photos = []
+
+    if (profile.photoUrl) {
+      photos.push({
+        id: 'couple-profile-photo',
+        title: `${profile.one} + ${profile.two}`,
+        date: profile.since,
+        source: 'Profile',
+        photoUrl: profile.photoUrl,
+      })
+    }
+
+    timelineMemories.forEach((memory) => {
+      if (memory.photoUrl) {
+        photos.push({
+          id: `memory-${memory.id}`,
+          title: memory.title,
+          date: memory.date || memory.createdAt,
+          source: 'Story',
+          photoUrl: memory.photoUrl,
+        })
+      }
+    })
+
+    dates.forEach((datePlan) => {
+      if (datePlan.photo) {
+        photos.push({
+          id: `date-${datePlan.id}`,
+          title: datePlan.title,
+          date: datePlan.when,
+          source: 'Dates',
+          photoUrl: datePlan.photo,
+        })
+      }
+    })
+
+    notes.forEach((note) => {
+      if (note.photo) {
+        photos.push({
+          id: `note-${note.id}`,
+          title: note.subject,
+          date: note.createdAt,
+          source: 'Notes',
+          photoUrl: note.photo,
+        })
+      }
+    })
+
+    return photos.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+  }, [dates, notes, profile, timelineMemories])
+
+  const selectTab = (nextTab) => {
+    setTab(nextTab)
+    setIsSidebarOpen(false)
+  }
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-  }, [theme])
+    document.documentElement.dataset.theme = 'light'
+  }, [])
 
   if (sync.isConfigured && !sync.authReady) {
     return (
@@ -232,16 +344,28 @@ function App() {
   }
 
   return (
-    <div className="app-ui">
-      <header className="app-header">
-        <button type="button" className="brand-mark" onClick={() => setTab('home')}>
-          <span className="brand-icon">
-            <Heart className="h-4 w-4" />
-          </span>
-          <span>Us+</span>
-        </button>
+    <div className="app-ui app-frame">
+      <button
+        type="button"
+        className={`sidebar-scrim ${isSidebarOpen ? 'sidebar-scrim-open' : ''}`}
+        aria-label="Close navigation"
+        onClick={() => setIsSidebarOpen(false)}
+      />
 
-        <nav className="app-nav" aria-label="Main navigation">
+      <aside className={`app-sidebar ${isSidebarOpen ? 'app-sidebar-open' : ''}`} aria-label="Main sidebar">
+        <div className="sidebar-head">
+          <button type="button" className="brand-mark" onClick={() => selectTab('home')}>
+            <span className="brand-icon">
+              <Heart className="h-4 w-4" />
+            </span>
+            <span>Us+</span>
+          </button>
+          <button type="button" className="icon-action" aria-label="Close sidebar" onClick={() => setIsSidebarOpen(false)}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <nav className="sidebar-nav" aria-label="Main navigation">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = tab === item.id
@@ -250,8 +374,8 @@ function App() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setTab(item.id)}
-                className={`nav-tab ${isActive ? 'nav-tab-active' : ''}`}
+                onClick={() => selectTab(item.id)}
+                className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item-active' : ''}`}
               >
                 <Icon className="h-4 w-4" />
                 <span>{item.label}</span>
@@ -260,33 +384,41 @@ function App() {
           })}
         </nav>
 
-        <div className="header-actions">
-          <SyncBadge
-            isConfigured={sync.isConfigured}
-            session={sync.session}
-            syncStatus={sync.syncStatus}
-          />
+        <SidebarAccount profile={profile} sync={sync} />
+      </aside>
 
-          <button
-            type="button"
-            className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
-            aria-label={`Switch to ${isLightTheme ? 'dark' : 'light'} theme`}
-            aria-pressed={isLightTheme}
-            onClick={() => setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))}
-          >
-            <span className="theme-toggle-icon">
-              {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </span>
-            <span>Light</span>
+      <div className="app-content">
+        <header className="app-topbar">
+          <button type="button" className="menu-button" aria-label="Open navigation" onClick={() => setIsSidebarOpen(true)}>
+            <Menu className="h-5 w-5" />
           </button>
 
-          <div className="partner-chip">
-            {profile.one} + {profile.two}
+          <div className="topbar-title">
+            <p className="eyebrow">Private space</p>
+            <h2>{navItems.find((item) => item.id === tab)?.label ?? 'Us+'}</h2>
           </div>
-        </div>
-      </header>
 
-      <main className="app-main">
+          <div className="header-actions">
+            <button
+              type="button"
+              className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
+              aria-label="Light theme active"
+              aria-pressed={isLightTheme}
+              onClick={() => setTheme('light')}
+            >
+              <span className="theme-toggle-icon">
+                {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              </span>
+              <span>Light</span>
+            </button>
+
+            <div className="partner-chip">
+              {profile.one} + {profile.two}
+            </div>
+          </div>
+        </header>
+
+        <main className="app-main">
         {tab === 'home' && (
           <DashboardSection
             days={days}
@@ -296,11 +428,10 @@ function App() {
             topDream={topDream}
             timelineCount={timeline.length}
             notesCount={notes.length}
-            setProfile={setProfile}
-            sync={sync}
-            uploadImage={sync.uploadImage}
           />
         )}
+
+        {tab === 'gallery' && <GallerySection items={galleryItems} />}
 
         {tab === 'timeline' && (
           <MemoriesSection
@@ -352,7 +483,31 @@ function App() {
         {tab === 'dream-board' && <GoalsSection dreams={dreams} setDreams={setDreams} />}
         {tab === 'notes' && <NotesSection notes={notes} setNotes={setNotes} onUploadPhoto={sync.uploadImage} />}
         {tab === 'playlist' && <MusicSection now={now} playlist={playlist} setPlaylist={setPlaylist} />}
-      </main>
+        {tab === 'profile' && (
+          <ProfileSection
+            profile={profile}
+            setProfile={setProfile}
+            sync={sync}
+            uploadImage={sync.uploadImage}
+          />
+        )}
+        {tab === 'settings' && (
+          <SettingsSection
+            counts={{
+              dates: dates.length,
+              gallery: galleryItems.length,
+              goals: dreams.length,
+              memories: timeline.length,
+              notes: notes.length,
+              songs: playlist.length,
+            }}
+            isLightTheme={isLightTheme}
+            setTheme={setTheme}
+            sync={sync}
+          />
+        )}
+        </main>
+      </div>
     </div>
   )
 }
@@ -365,32 +520,7 @@ function DashboardSection({
   topDream,
   timelineCount,
   notesCount,
-  setProfile,
-  sync,
-  uploadImage,
 }) {
-  const couplePhotoInputRef = useRef(null)
-  const [photoStatus, setPhotoStatus] = useState('')
-
-  const handleCouplePhotoChange = async (event) => {
-    const [file] = event.target.files || []
-
-    if (!file || !file.type.startsWith('image/')) {
-      return
-    }
-
-    try {
-      setPhotoStatus('Uploading picture...')
-      const photoUrl = await uploadImage(file)
-      setProfile((currentProfile) => ({ ...currentProfile, photoUrl }))
-      setPhotoStatus('')
-    } catch (error) {
-      setPhotoStatus(error.message || 'Picture upload failed.')
-    } finally {
-      event.target.value = ''
-    }
-  }
-
   return (
     <section className="app-page dashboard-page">
       <article className="couple-card">
@@ -406,39 +536,12 @@ function DashboardSection({
               <Heart className="h-10 w-10" />
             </div>
           )}
-          <button
-            type="button"
-            className="couple-upload-button"
-            disabled={photoStatus === 'Uploading picture...'}
-            onClick={() => couplePhotoInputRef.current?.click()}
-          >
-            {photoStatus === 'Uploading picture...' ? 'Uploading' : profile.photoUrl ? 'Change picture' : 'Add picture'}
-          </button>
-          <input
-            ref={couplePhotoInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleCouplePhotoChange}
-          />
         </div>
         <div className="couple-names">
           <h1>{profile.one} + {profile.two}</h1>
           <p className="body-muted">Together since {formatDate(profile.since)}</p>
-          {photoStatus && photoStatus !== 'Uploading picture...' ? <p className="field-error">{photoStatus}</p> : null}
         </div>
       </article>
-
-      <SyncPanel
-        authMessage={sync.authMessage}
-        isConfigured={sync.isConfigured}
-        session={sync.session}
-        signIn={sync.signIn}
-        signOut={sync.signOut}
-        signUp={sync.signUp}
-        syncMessage={sync.syncMessage}
-        syncStatus={sync.syncStatus}
-      />
 
       <PageHeader
         eyebrow="Dashboard"
@@ -461,43 +564,6 @@ function DashboardSection({
         <article className="metric-card">
           <span className="metric-label">Notes</span>
           <strong>{notesCount}</strong>
-        </article>
-
-        <article className="tool-panel profile-panel">
-          <h2>Profile</h2>
-          <div className="field-grid">
-            <label>
-              <span>First partner</span>
-              <input
-                className="input-field"
-                value={profile.one}
-                onChange={(event) => setProfile((value) => ({ ...value, one: event.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Second partner</span>
-              <input
-                className="input-field"
-                value={profile.two}
-                onChange={(event) => setProfile((value) => ({ ...value, two: event.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Start date</span>
-              <input
-                type="date"
-                className="input-field"
-                value={profile.since}
-                onChange={(event) => setProfile((value) => ({ ...value, since: event.target.value }))}
-              />
-            </label>
-          </div>
-          <ImageUploadField
-            label="Couple picture"
-            value={profile.photoUrl ?? ''}
-            onChange={(value) => setProfile((currentProfile) => ({ ...currentProfile, photoUrl: value }))}
-            onUploadFile={uploadImage}
-          />
         </article>
 
         <article className="info-panel">
@@ -529,6 +595,192 @@ function DashboardSection({
         <article className="quote-panel">
           <span className="metric-label">Today</span>
           <p>"{quote}"</p>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+function GallerySection({ items }) {
+  return (
+    <section className="app-page">
+      <PageHeader
+        eyebrow="Gallery"
+        title="Photo gallery"
+        summary="Every uploaded couple photo, memory image, date picture, and note attachment in one clean place."
+      />
+
+      {items.length ? (
+        <div className="gallery-grid">
+          {items.map((item, index) => (
+            <article key={item.id} className={`gallery-card ${index === 0 ? 'gallery-card-featured' : ''}`}>
+              <img src={item.photoUrl} alt={item.title} className="gallery-image" loading="lazy" />
+              <div className="gallery-card-meta">
+                <span className="status-pill">{item.source}</span>
+                <div>
+                  <h3>{item.title}</h3>
+                  {item.date ? <p className="body-muted">{formatDate(item.date)}</p> : null}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="No gallery photos yet"
+          text="Upload a couple picture, memory photo, date photo, or note attachment and it will appear here."
+        />
+      )}
+    </section>
+  )
+}
+
+function ProfileSection({ profile, setProfile, sync, uploadImage }) {
+  return (
+    <section className="app-page">
+      <PageHeader
+        eyebrow="Profile"
+        title="Couple profile"
+        summary="Manage the names, relationship date, cover photo, and shared account status for this private space."
+      />
+
+      <div className="profile-layout">
+        <article className="profile-hero-card">
+          <div className="profile-photo-large">
+            {profile.photoUrl ? (
+              <img src={profile.photoUrl} alt={`${profile.one} and ${profile.two}`} />
+            ) : (
+              <Heart className="h-12 w-12" />
+            )}
+          </div>
+          <div>
+            <p className="eyebrow">Together</p>
+            <h2>{profile.one} + {profile.two}</h2>
+            <p className="body-muted">Started {formatDate(profile.since)}</p>
+          </div>
+        </article>
+
+        <article className="tool-panel">
+          <h2>Edit details</h2>
+          <div className="field-grid">
+            <label>
+              <span>First partner</span>
+              <input
+                className="input-field"
+                value={profile.one}
+                onChange={(event) => setProfile((value) => ({ ...value, one: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span>Second partner</span>
+              <input
+                className="input-field"
+                value={profile.two}
+                onChange={(event) => setProfile((value) => ({ ...value, two: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span>Relationship start date</span>
+              <input
+                type="date"
+                className="input-field"
+                value={profile.since}
+                onChange={(event) => setProfile((value) => ({ ...value, since: event.target.value }))}
+              />
+            </label>
+          </div>
+          <ImageUploadField
+            label="Couple picture"
+            value={profile.photoUrl ?? ''}
+            onChange={(value) => setProfile((currentProfile) => ({ ...currentProfile, photoUrl: value }))}
+            onUploadFile={uploadImage}
+          />
+        </article>
+
+        <article className="profile-account-card">
+          <div className="sync-icon">
+            <Cloud className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="eyebrow">Shared account</p>
+            <h2>{getSyncLabel(sync.syncStatus)}</h2>
+            <p className="body-muted">{sync.session?.user?.email || 'Local workspace'}</p>
+            <p className={`sync-message ${sync.syncStatus === 'error' ? 'sync-message-error' : ''}`}>
+              {sync.syncMessage}
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+  )
+}
+
+function SettingsSection({ counts, isLightTheme, setTheme, sync }) {
+  const countItems = [
+    ['Memories', counts.memories],
+    ['Gallery photos', counts.gallery],
+    ['Dates', counts.dates],
+    ['Goals', counts.goals],
+    ['Notes', counts.notes],
+    ['Songs', counts.songs],
+  ]
+
+  return (
+    <section className="app-page">
+      <PageHeader
+        eyebrow="Settings"
+        title="Workspace settings"
+        summary="A calm control room for appearance, sync health, and the shape of your shared space."
+      />
+
+      <div className="settings-grid">
+        <article className="settings-card">
+          <div className="settings-card-head">
+            <div className="settings-icon">
+              <Sun className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="eyebrow">Appearance</p>
+              <h2>Clean light interface</h2>
+              <p className="body-muted">The product is tuned for the current premium white, purple, and cyan identity.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={`theme-toggle settings-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
+            onClick={() => setTheme('light')}
+          >
+            <span className="theme-toggle-icon">
+              {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </span>
+            Light theme
+          </button>
+        </article>
+
+        <article className="settings-card">
+          <div className="settings-card-head">
+            <div className="settings-icon">
+              <Cloud className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="eyebrow">Sync</p>
+              <h2>{getSyncLabel(sync.syncStatus)}</h2>
+              <p className="body-muted">{sync.syncMessage}</p>
+            </div>
+          </div>
+          <span className="status-pill">{sync.session?.user?.email || 'Local only'}</span>
+        </article>
+
+        <article className="settings-card settings-card-wide">
+          <p className="eyebrow">Workspace content</p>
+          <div className="settings-stat-grid">
+            {countItems.map(([label, value]) => (
+              <div key={label} className="settings-stat">
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
         </article>
       </div>
     </section>
