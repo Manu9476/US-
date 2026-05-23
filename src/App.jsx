@@ -1,28 +1,40 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Accessibility,
+  AlignLeft,
+  ALargeSmall,
+  Baseline,
   BookOpenText,
   CalendarRange,
+  CaseSensitive,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Cloud,
+  Contrast,
+  Droplets,
+  EyeOff,
   FileText,
   Heart,
   Images,
+  Info,
   LayoutDashboard,
+  Link,
   LogOut,
   MessageSquareText,
   Menu,
-  Moon,
+  MousePointer2,
   Music4,
   Pencil,
   Plus,
+  RotateCcw,
   Save,
   Settings as SettingsIcon,
   Shuffle,
   ShieldCheck,
-  Sun,
+  Pause,
   Target,
+  TextCursorInput,
   Trash2,
   Upload,
   User,
@@ -73,6 +85,45 @@ const dateIdeas = [
 ]
 
 const URGENT_REMINDER_MS = 24 * 60 * 60 * 1000
+
+const initialAccessibilitySettings = {
+  biggerText: false,
+  contrast: false,
+  cursor: false,
+  dyslexia: false,
+  hideImages: false,
+  highlightLinks: false,
+  largeWidget: false,
+  lineHeight: false,
+  pauseAnimations: false,
+  saturation: 'normal',
+  textAlign: 'default',
+  textSpacing: false,
+  tooltips: false,
+}
+
+const accessibilityOptionGroups = [
+  [
+    { key: 'dyslexia', label: 'Dyslexia Friendly', icon: CaseSensitive },
+    { key: 'cursor', label: 'Cursor', icon: MousePointer2 },
+    { key: 'tooltips', label: 'Tooltips', icon: Info },
+    { key: 'lineHeight', label: 'Line Height', icon: Baseline },
+    { key: 'textAlign', label: 'Text Align', icon: AlignLeft, type: 'textAlign' },
+    { key: 'saturation', label: 'Saturation', icon: Droplets, type: 'saturation' },
+  ],
+  [
+    { key: 'contrast', label: 'Contrast +', icon: Contrast },
+    { key: 'highlightLinks', label: 'Highlight Links', icon: Link },
+    { key: 'biggerText', label: 'Bigger Text', icon: ALargeSmall },
+    { key: 'textSpacing', label: 'Text Spacing', icon: TextCursorInput },
+    { key: 'pauseAnimations', label: 'Pause Animations', icon: Pause },
+    { key: 'hideImages', label: 'Hide Images', icon: EyeOff },
+  ],
+]
+
+function normalizeAccessibilitySettings(settings) {
+  return { ...initialAccessibilitySettings, ...(settings && typeof settings === 'object' ? settings : {}) }
+}
 
 function getFutureDifference(value, now) {
   const target = new Date(value)
@@ -290,6 +341,145 @@ function EmptyState({ title, text }) {
   )
 }
 
+function AccessibilityWidget({
+  isOpen,
+  onReset,
+  setIsOpen,
+  setSettings,
+  settings,
+}) {
+  const activeCount = Object.entries(settings).filter(([key, value]) => {
+    if (key === 'saturation') return value !== 'normal'
+    if (key === 'textAlign') return value !== 'default'
+    return Boolean(value)
+  }).length
+
+  const toggleSetting = (key) => {
+    setSettings((current) => {
+      const normalized = normalizeAccessibilitySettings(current)
+      return { ...normalized, [key]: !normalized[key] }
+    })
+  }
+
+  const cycleTextAlign = () => {
+    const order = ['default', 'left', 'center']
+    setSettings((current) => {
+      const normalized = normalizeAccessibilitySettings(current)
+      const nextValue = order[(order.indexOf(normalized.textAlign) + 1) % order.length]
+      return { ...normalized, textAlign: nextValue }
+    })
+  }
+
+  const cycleSaturation = () => {
+    const order = ['normal', 'low', 'high']
+    setSettings((current) => {
+      const normalized = normalizeAccessibilitySettings(current)
+      const nextValue = order[(order.indexOf(normalized.saturation) + 1) % order.length]
+      return { ...normalized, saturation: nextValue }
+    })
+  }
+
+  useEffect(() => {
+    if (!isOpen) return undefined
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, setIsOpen])
+
+  return (
+    <div className="accessibility-widget">
+      <button
+        type="button"
+        className={`accessibility-trigger ${isOpen ? 'accessibility-trigger-active' : ''}`}
+        aria-expanded={isOpen}
+        aria-label="Open accessibility menu"
+        onClick={() => setIsOpen((value) => !value)}
+      >
+        <Accessibility className="h-4 w-4" />
+        <span>Access</span>
+        {activeCount ? <strong>{activeCount}</strong> : null}
+      </button>
+
+      {isOpen ? (
+        <aside className={`accessibility-panel ${settings.largeWidget ? 'accessibility-panel-large' : ''}`}>
+          <div className="accessibility-panel-head">
+            <div>
+              <p>Accessibility Menu</p>
+              <span>CTRL + U</span>
+            </div>
+            <button type="button" aria-label="Close accessibility menu" onClick={() => setIsOpen(false)}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="accessibility-demo-button">
+            <Info className="h-4 w-4" />
+            <span>Choose the view that feels best for you</span>
+          </div>
+
+          <label className="accessibility-switch-row">
+            <span>Oversized widget</span>
+            <input
+              type="checkbox"
+              checked={settings.largeWidget}
+              onChange={() => toggleSetting('largeWidget')}
+            />
+          </label>
+
+          {accessibilityOptionGroups.map((group, groupIndex) => (
+            <div className="accessibility-grid" key={groupIndex}>
+              {group.map((option) => {
+                const Icon = option.icon
+                const isActive =
+                  option.type === 'textAlign'
+                    ? settings.textAlign !== 'default'
+                    : option.type === 'saturation'
+                      ? settings.saturation !== 'normal'
+                      : Boolean(settings[option.key])
+                const detail =
+                  option.type === 'textAlign'
+                    ? settings.textAlign
+                    : option.type === 'saturation'
+                      ? settings.saturation
+                      : isActive
+                        ? 'on'
+                        : 'off'
+
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className={`accessibility-option ${isActive ? 'accessibility-option-active' : ''}`}
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      if (option.type === 'textAlign') cycleTextAlign()
+                      else if (option.type === 'saturation') cycleSaturation()
+                      else toggleSetting(option.key)
+                    }}
+                  >
+                    <Icon className="h-7 w-7" />
+                    <span>{option.label}</span>
+                    <small>{detail}</small>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+
+          <button type="button" className="accessibility-reset" onClick={onReset}>
+            <RotateCcw className="h-4 w-4" />
+            Reset All Accessibility Settings
+          </button>
+        </aside>
+      ) : null}
+    </div>
+  )
+}
+
 function getSyncLabel(syncStatus) {
   if (syncStatus === 'saving') return 'Saving changes'
   if (syncStatus === 'synced') return 'Synced'
@@ -353,7 +543,15 @@ function SidebarLegalFooter({ onSelect }) {
   )
 }
 
-function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
+function AuthAccessPage({
+  accessibilitySettings,
+  isAccessibilityOpen,
+  isLoading = false,
+  resetAccessibility,
+  setAccessibility,
+  setIsAccessibilityOpen,
+  sync,
+}) {
   return (
     <div className="auth-page">
       <div className="auth-orb auth-orb-orange" />
@@ -367,18 +565,13 @@ function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
           <span>Us+</span>
         </div>
 
-        <button
-          type="button"
-          className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
-          aria-label="Light theme active"
-          aria-pressed={isLightTheme}
-          onClick={() => setTheme('light')}
-        >
-          <span className="theme-toggle-icon">
-            {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-          </span>
-          <span>Light</span>
-        </button>
+        <AccessibilityWidget
+          isOpen={isAccessibilityOpen}
+          onReset={resetAccessibility}
+          setIsOpen={setIsAccessibilityOpen}
+          setSettings={setAccessibility}
+          settings={accessibilitySettings}
+        />
       </header>
 
       <main className="auth-shell">
@@ -446,7 +639,11 @@ function App() {
   const [gallery, setGallery] = useLocalStorageState('us-plus-premium-gallery', [])
   const [notes, setNotes] = useLocalStorageState('us-plus-premium-vault', [])
   const [playlist, setPlaylist] = useLocalStorageState('us-plus-premium-playlist', [])
-  const [, setTheme] = useLocalStorageState('us-plus-theme', 'light')
+  const [accessibility, setAccessibility] = useLocalStorageState(
+    'us-plus-accessibility',
+    initialAccessibilitySettings,
+  )
+  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false)
   const [idea, setIdea] = useState(dateIdeas[0])
   const sync = useSupabaseWorkspace({
     profile,
@@ -484,7 +681,10 @@ function App() {
   )
 
   const topDream = useMemo(() => [...dreams].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))[0], [dreams])
-  const isLightTheme = true
+  const accessibilitySettings = useMemo(
+    () => normalizeAccessibilitySettings(accessibility),
+    [accessibility],
+  )
   const activeLabel =
     navItems.find((item) => item.id === tab)?.label ||
     legalNavItems.find((item) => item.id === tab)?.label ||
@@ -581,16 +781,48 @@ function App() {
     setIsSidebarOpen(false)
   }
 
+  const resetAccessibility = () => {
+    setAccessibility(initialAccessibilitySettings)
+  }
+
   useEffect(() => {
-    document.documentElement.dataset.theme = 'light'
+    const root = document.documentElement
+    root.dataset.theme = 'light'
+    root.dataset.a11yBiggerText = String(accessibilitySettings.biggerText)
+    root.dataset.a11yContrast = String(accessibilitySettings.contrast)
+    root.dataset.a11yCursor = String(accessibilitySettings.cursor)
+    root.dataset.a11yDyslexia = String(accessibilitySettings.dyslexia)
+    root.dataset.a11yHideImages = String(accessibilitySettings.hideImages)
+    root.dataset.a11yHighlightLinks = String(accessibilitySettings.highlightLinks)
+    root.dataset.a11yLineHeight = String(accessibilitySettings.lineHeight)
+    root.dataset.a11yPauseAnimations = String(accessibilitySettings.pauseAnimations)
+    root.dataset.a11ySaturation = accessibilitySettings.saturation
+    root.dataset.a11yTextAlign = accessibilitySettings.textAlign
+    root.dataset.a11yTextSpacing = String(accessibilitySettings.textSpacing)
+    root.dataset.a11yTooltips = String(accessibilitySettings.tooltips)
+  }, [accessibilitySettings])
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'u') {
+        event.preventDefault()
+        setIsAccessibilityOpen((value) => !value)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   if (sync.isConfigured && !sync.authReady) {
     return (
       <AuthAccessPage
-        isLightTheme={isLightTheme}
+        accessibilitySettings={accessibilitySettings}
+        isAccessibilityOpen={isAccessibilityOpen}
         isLoading
-        setTheme={setTheme}
+        resetAccessibility={resetAccessibility}
+        setAccessibility={setAccessibility}
+        setIsAccessibilityOpen={setIsAccessibilityOpen}
         sync={sync}
       />
     )
@@ -599,8 +831,11 @@ function App() {
   if (sync.isConfigured && !sync.session) {
     return (
       <AuthAccessPage
-        isLightTheme={isLightTheme}
-        setTheme={setTheme}
+        accessibilitySettings={accessibilitySettings}
+        isAccessibilityOpen={isAccessibilityOpen}
+        resetAccessibility={resetAccessibility}
+        setAccessibility={setAccessibility}
+        setIsAccessibilityOpen={setIsAccessibilityOpen}
         sync={sync}
       />
     )
@@ -665,18 +900,13 @@ function App() {
           </div>
 
           <div className="header-actions">
-            <button
-              type="button"
-              className={`theme-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
-              aria-label="Light theme active"
-              aria-pressed={isLightTheme}
-              onClick={() => setTheme('light')}
-            >
-              <span className="theme-toggle-icon">
-                {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-              </span>
-              <span>Light</span>
-            </button>
+            <AccessibilityWidget
+              isOpen={isAccessibilityOpen}
+              onReset={resetAccessibility}
+              setIsOpen={setIsAccessibilityOpen}
+              setSettings={setAccessibility}
+              settings={accessibilitySettings}
+            />
 
             <div className="partner-chip">
               {profile.one} + {profile.two}
@@ -775,8 +1005,6 @@ function App() {
               notes: notes.length,
               songs: playlist.length,
             }}
-            isLightTheme={isLightTheme}
-            setTheme={setTheme}
             sync={sync}
           />
         )}
@@ -1283,7 +1511,7 @@ function ProfileSection({ profile, setProfile, sync, uploadImage }) {
   )
 }
 
-function SettingsSection({ counts, isLightTheme, setTheme, sync }) {
+function SettingsSection({ counts, sync }) {
   const countItems = [
     ['Memories', counts.memories],
     ['Gallery photos', counts.gallery],
@@ -1305,24 +1533,15 @@ function SettingsSection({ counts, isLightTheme, setTheme, sync }) {
         <article className="settings-card">
           <div className="settings-card-head">
             <div className="settings-icon">
-              <Sun className="h-5 w-5" />
+              <Accessibility className="h-5 w-5" />
             </div>
             <div>
-              <p className="eyebrow">Appearance</p>
-              <h2>Clean light interface</h2>
-              <p className="body-muted">The product is tuned for the current premium white, purple, and cyan identity.</p>
+              <p className="eyebrow">Accessibility</p>
+              <h2>Personal display controls</h2>
+              <p className="body-muted">Use the accessibility button in the top bar or press CTRL + U to adjust the interface.</p>
             </div>
           </div>
-          <button
-            type="button"
-            className={`theme-toggle settings-toggle ${isLightTheme ? 'theme-toggle-light' : ''}`}
-            onClick={() => setTheme('light')}
-          >
-            <span className="theme-toggle-icon">
-              {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </span>
-            Light theme
-          </button>
+          <span className="status-pill">CTRL + U</span>
         </article>
 
         <article className="settings-card">
