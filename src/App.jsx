@@ -101,7 +101,7 @@ function AuthAccessPage({ isLightTheme, isLoading = false, setTheme, sync }) {
           <span className="theme-toggle-icon">
             {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </span>
-          <span>{isLightTheme ? 'Light' : 'Dark'}</span>
+          <span>Light</span>
         </button>
       </header>
 
@@ -277,7 +277,7 @@ function App() {
             <span className="theme-toggle-icon">
               {isLightTheme ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </span>
-            <span>{isLightTheme ? 'Light' : 'Dark'}</span>
+            <span>Light</span>
           </button>
 
           <div className="partner-chip">
