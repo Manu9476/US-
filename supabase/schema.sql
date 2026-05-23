@@ -4,10 +4,14 @@ create table if not exists public.us_plus_workspaces (
   timeline jsonb not null default '[]'::jsonb,
   dates jsonb not null default '[]'::jsonb,
   dreams jsonb not null default '[]'::jsonb,
+  gallery jsonb not null default '[]'::jsonb,
   notes jsonb not null default '[]'::jsonb,
   playlist jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.us_plus_workspaces
+add column if not exists gallery jsonb not null default '[]'::jsonb;
 
 alter table public.us_plus_workspaces enable row level security;
 

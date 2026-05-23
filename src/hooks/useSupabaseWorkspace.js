@@ -13,12 +13,14 @@ export function useSupabaseWorkspace({
   timeline,
   dates,
   dreams,
+  gallery,
   notes,
   playlist,
   setProfile,
   setTimeline,
   setDates,
   setDreams,
+  setGallery,
   setNotes,
   setPlaylist,
 }) {
@@ -35,10 +37,12 @@ export function useSupabaseWorkspace({
     timeline,
     dates,
     dreams,
+    gallery,
     notes,
     playlist,
   })
   const hasHydratedRemoteRef = useRef(false)
+  const supportsGalleryRef = useRef(true)
   const saveTimerRef = useRef(null)
 
   useEffect(() => {
@@ -47,10 +51,11 @@ export function useSupabaseWorkspace({
       timeline,
       dates,
       dreams,
+      gallery,
       notes,
       playlist,
     }
-  }, [dates, dreams, notes, playlist, profile, timeline])
+  }, [dates, dreams, gallery, notes, playlist, profile, timeline])
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -102,11 +107,25 @@ export function useSupabaseWorkspace({
       setSyncStatus('loading')
       setSyncMessage('Loading your shared couple space...')
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from(WORKSPACE_TABLE)
-        .select('profile,timeline,dates,dreams,notes,playlist')
+        .select('profile,timeline,dates,dreams,gallery,notes,playlist')
         .eq('user_id', session.user.id)
         .maybeSingle()
+
+      if (error && error.message.toLowerCase().includes('gallery')) {
+        supportsGalleryRef.current = false
+        const fallback = await supabase
+          .from(WORKSPACE_TABLE)
+          .select('profile,timeline,dates,dreams,notes,playlist')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+
+        data = fallback.data ? { ...fallback.data, gallery: latestWorkspaceRef.current.gallery } : fallback.data
+        error = fallback.error
+      } else {
+        supportsGalleryRef.current = true
+      }
 
       if (isCancelled) return
 
@@ -122,10 +141,16 @@ export function useSupabaseWorkspace({
         setTimeline(asArray(data.timeline))
         setDates(asArray(data.dates))
         setDreams(asArray(data.dreams))
+        setGallery(asArray(data.gallery))
         setNotes(asArray(data.notes))
         setPlaylist(asArray(data.playlist))
       } else {
-        const initialWorkspace = latestWorkspaceRef.current
+        const initialWorkspace = { ...latestWorkspaceRef.current }
+
+        if (!supportsGalleryRef.current) {
+          delete initialWorkspace.gallery
+        }
+
         const { error: createError } = await supabase.from(WORKSPACE_TABLE).upsert({
           user_id: session.user.id,
           ...initialWorkspace,
@@ -140,8 +165,12 @@ export function useSupabaseWorkspace({
 
       hasHydratedRemoteRef.current = true
       setRemoteReady(true)
-      setSyncStatus('synced')
-      setSyncMessage('Cloud sync is active.')
+      setSyncStatus(supportsGalleryRef.current ? 'synced' : 'error')
+      setSyncMessage(
+        supportsGalleryRef.current
+          ? 'Cloud sync is active.'
+          : 'Cloud sync is active, but the gallery database column needs the Supabase schema update.',
+      )
     }
 
     loadWorkspace()
@@ -149,7 +178,7 @@ export function useSupabaseWorkspace({
     return () => {
       isCancelled = true
     }
-  }, [authReady, session?.user, setDates, setDreams, setNotes, setPlaylist, setProfile, setTimeline])
+  }, [authReady, session?.user, setDates, setDreams, setGallery, setNotes, setPlaylist, setProfile, setTimeline])
 
   useEffect(() => {
     if (!isSupabaseConfigured || !session?.user || !remoteReady || !hasHydratedRemoteRef.current) {
@@ -164,9 +193,15 @@ export function useSupabaseWorkspace({
     setSyncMessage('Saving latest changes...')
 
     saveTimerRef.current = window.setTimeout(async () => {
+      const workspace = { ...latestWorkspaceRef.current }
+
+      if (!supportsGalleryRef.current) {
+        delete workspace.gallery
+      }
+
       const { error } = await supabase.from(WORKSPACE_TABLE).upsert({
         user_id: session.user.id,
-        ...latestWorkspaceRef.current,
+        ...workspace,
       })
 
       if (error) {
@@ -175,8 +210,12 @@ export function useSupabaseWorkspace({
         return
       }
 
-      setSyncStatus('synced')
-      setSyncMessage('All changes are synced.')
+      setSyncStatus(supportsGalleryRef.current ? 'synced' : 'error')
+      setSyncMessage(
+        supportsGalleryRef.current
+          ? 'All changes are synced.'
+          : 'Most changes are synced. Run the Supabase schema update to sync gallery photos.',
+      )
     }, SYNC_DELAY_MS)
 
     return () => {
@@ -184,7 +223,7 @@ export function useSupabaseWorkspace({
         window.clearTimeout(saveTimerRef.current)
       }
     }
-  }, [dates, dreams, notes, playlist, profile, remoteReady, session?.user, timeline])
+  }, [dates, dreams, gallery, notes, playlist, profile, remoteReady, session?.user, timeline])
 
   const signIn = async ({ email, password }) => {
     if (!isSupabaseConfigured) return { error: new Error('Supabase is not configured yet.') }

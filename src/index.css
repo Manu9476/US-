@@ -1023,9 +1023,38 @@ a {
   line-height: 1.5;
 }
 
+.gallery-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.gallery-uploader {
+  position: sticky;
+  top: 104px;
+}
+
+.gallery-caption-input {
+  min-height: 104px;
+  padding-block: 12px;
+  resize: vertical;
+}
+
+.gallery-wall-panel {
+  min-width: 0;
+}
+
+.gallery-wall-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1062,6 +1091,10 @@ a {
   padding: 14px;
   box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
   backdrop-filter: blur(18px);
+}
+
+.gallery-card-meta .card-actions {
+  justify-content: flex-end;
 }
 
 .profile-layout {
@@ -1661,6 +1694,7 @@ a {
 
   .dashboard-grid,
   .workspace-grid,
+  .gallery-workspace,
   .gallery-grid,
   .profile-layout,
   .settings-grid {
@@ -1682,6 +1716,10 @@ a {
 
   .memory-grid {
     grid-template-columns: 1fr;
+  }
+
+  .gallery-uploader {
+    position: static;
   }
 }
 

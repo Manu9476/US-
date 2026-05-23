@@ -417,6 +417,7 @@ function App() {
   const [timeline, setTimeline] = useLocalStorageState('us-plus-premium-timeline', [])
   const [dates, setDates] = useLocalStorageState('us-plus-premium-dates', [])
   const [dreams, setDreams] = useLocalStorageState('us-plus-premium-dreams', [])
+  const [gallery, setGallery] = useLocalStorageState('us-plus-premium-gallery', [])
   const [notes, setNotes] = useLocalStorageState('us-plus-premium-vault', [])
   const [playlist, setPlaylist] = useLocalStorageState('us-plus-premium-playlist', [])
   const [, setTheme] = useLocalStorageState('us-plus-theme', 'light')
@@ -426,12 +427,14 @@ function App() {
     timeline,
     dates,
     dreams,
+    gallery,
     notes,
     playlist,
     setProfile,
     setTimeline,
     setDates,
     setDreams,
+    setGallery,
     setNotes,
     setPlaylist,
   })
@@ -461,56 +464,8 @@ function App() {
     legalNavItems.find((item) => item.id === tab)?.label ||
     'Us+'
   const galleryItems = useMemo(() => {
-    const photos = []
-
-    if (profile.photoUrl) {
-      photos.push({
-        id: 'couple-profile-photo',
-        title: `${profile.one} + ${profile.two}`,
-        date: profile.since,
-        source: 'Profile',
-        photoUrl: profile.photoUrl,
-      })
-    }
-
-    timelineMemories.forEach((memory) => {
-      if (memory.photoUrl) {
-        photos.push({
-          id: `memory-${memory.id}`,
-          title: memory.title,
-          date: memory.date || memory.createdAt,
-          source: 'Story',
-          photoUrl: memory.photoUrl,
-        })
-      }
-    })
-
-    dates.forEach((datePlan) => {
-      if (datePlan.photo) {
-        photos.push({
-          id: `date-${datePlan.id}`,
-          title: datePlan.title,
-          date: datePlan.when,
-          source: 'Dates',
-          photoUrl: datePlan.photo,
-        })
-      }
-    })
-
-    notes.forEach((note) => {
-      if (note.photo) {
-        photos.push({
-          id: `note-${note.id}`,
-          title: note.subject,
-          date: note.createdAt,
-          source: 'Notes',
-          photoUrl: note.photo,
-        })
-      }
-    })
-
-    return photos.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
-  }, [dates, notes, profile, timelineMemories])
+    return [...gallery].sort((a, b) => new Date(b.date || b.createdAt || 0).getTime() - new Date(a.date || a.createdAt || 0).getTime())
+  }, [gallery])
 
   const selectTab = (nextTab) => {
     setTab(nextTab)
@@ -633,7 +588,13 @@ function App() {
           />
         )}
 
-        {tab === 'gallery' && <GallerySection items={galleryItems} />}
+        {tab === 'gallery' && (
+          <GallerySection
+            items={galleryItems}
+            setGallery={setGallery}
+            onUploadPhoto={sync.uploadImage}
+          />
+        )}
 
         {tab === 'timeline' && (
           <MemoriesSection
@@ -805,40 +766,177 @@ function DashboardSection({
   )
 }
 
-function GallerySection({ items }) {
+function GallerySection({ items, setGallery, onUploadPhoto }) {
+  const [form, setForm] = useState({ title: '', date: '', caption: '', photoUrl: '' })
+  const [editingId, setEditingId] = useState(null)
+
+  const resetForm = () => {
+    setForm({ title: '', date: '', caption: '', photoUrl: '' })
+    setEditingId(null)
+  }
+
+  const savePhoto = (event) => {
+    event.preventDefault()
+    if (!form.title.trim() || !form.photoUrl.trim()) return
+
+    const nextPhoto = {
+      title: form.title.trim(),
+      date: form.date,
+      caption: form.caption.trim(),
+      photoUrl: form.photoUrl.trim(),
+    }
+
+    if (editingId) {
+      setGallery((photos) =>
+        photos.map((photo) =>
+          photo.id === editingId
+            ? { ...photo, ...nextPhoto, updatedAt: new Date().toISOString() }
+            : photo,
+        ),
+      )
+    } else {
+      setGallery((photos) => [
+        {
+          id: createId('gallery'),
+          ...nextPhoto,
+          createdAt: new Date().toISOString(),
+        },
+        ...photos,
+      ])
+    }
+
+    resetForm()
+  }
+
+  const editPhoto = (photo) => {
+    setEditingId(photo.id)
+    setForm({
+      title: photo.title ?? '',
+      date: photo.date ?? '',
+      caption: photo.caption ?? '',
+      photoUrl: photo.photoUrl ?? '',
+    })
+  }
+
   return (
     <section className="app-page">
       <PageHeader
         eyebrow="Gallery"
-        title="Photo gallery"
-        summary="Every uploaded couple photo, memory image, date picture, and note attachment in one clean place."
+        title="Our photo gallery"
+        summary="Upload, arrange, edit, and revisit the photos that belong to your shared space."
       />
 
-      {items.length ? (
-        <div className="gallery-grid">
-          {items.map((item, index) => (
-            <article key={item.id} className={`gallery-card ${index === 0 ? 'gallery-card-featured' : ''}`}>
-              <img src={item.photoUrl} alt={item.title} className="gallery-image" loading="lazy" />
-              <div className="gallery-card-meta">
-                <span className="status-pill">{item.source}</span>
-                <div>
-                  <h3>{item.title}</h3>
-                  {item.date ? <p className="body-muted">{formatDate(item.date)}</p> : null}
-                </div>
-              </div>
-            </article>
-          ))}
+      <div className="gallery-workspace">
+        <form className="tool-panel gallery-uploader" onSubmit={savePhoto}>
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">{editingId ? 'Editing photo' : 'New photo'}</p>
+              <h2>{editingId ? 'Update gallery photo' : 'Add to gallery'}</h2>
+            </div>
+            <Images className="h-5 w-5 accent-text" />
+          </div>
+
+          <div className="field-grid">
+            <label>
+              <span>Photo title</span>
+              <input
+                className="input-field"
+                placeholder="Beach afternoon"
+                value={form.title}
+                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span>Photo date</span>
+              <input
+                type="date"
+                className="input-field"
+                value={form.date}
+                onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span>Caption</span>
+              <textarea
+                className="input-field gallery-caption-input"
+                placeholder="What should this photo always remind you of?"
+                value={form.caption}
+                onChange={(event) => setForm((current) => ({ ...current, caption: event.target.value }))}
+              />
+            </label>
+          </div>
+
+          <ImageUploadField
+            label="Upload photo"
+            value={form.photoUrl}
+            onChange={(value) => setForm((current) => ({ ...current, photoUrl: value }))}
+            onUploadFile={onUploadPhoto}
+          />
+
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingId ? 'Save photo' : 'Add photo'}
+            </button>
+            {editingId ? (
+              <button type="button" className="secondary-button" onClick={resetForm}>
+                <X className="h-4 w-4" /> Cancel
+              </button>
+            ) : null}
+          </div>
+        </form>
+
+        <div className="list-panel gallery-wall-panel">
+          <div className="gallery-wall-head">
+            <div>
+              <p className="eyebrow">Arranged album</p>
+              <h2>{items.length} {items.length === 1 ? 'photo' : 'photos'}</h2>
+            </div>
+            <span className="status-pill">Newest first</span>
+          </div>
+
+          {items.length ? (
+            <div className="gallery-grid">
+              {items.map((item, index) => (
+                <article key={item.id} className={`gallery-card ${index === 0 ? 'gallery-card-featured' : ''}`}>
+                  <img src={item.photoUrl} alt={item.title} className="gallery-image" loading="lazy" />
+                  <div className="gallery-card-meta">
+                    <span className="status-pill">{item.date ? formatDate(item.date) : 'Undated'}</span>
+                    <div>
+                      <h3>{item.title}</h3>
+                      {item.caption ? <p className="body-muted">{item.caption}</p> : null}
+                    </div>
+                    <div className="card-actions">
+                      <button type="button" className="icon-action" aria-label={`Edit ${item.title}`} onClick={() => editPhoto(item)}>
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-action destructive-action"
+                        aria-label={`Delete ${item.title}`}
+                        onClick={() => {
+                          setGallery((photos) => photos.filter((photo) => photo.id !== item.id))
+                          if (editingId === item.id) resetForm()
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="No gallery photos yet"
+              text="Upload your first photo using the form. Your album will stay arranged newest first."
+            />
+          )}
         </div>
-      ) : (
-        <EmptyState
-          title="No gallery photos yet"
-          text="Upload a couple picture, memory photo, date photo, or note attachment and it will appear here."
-        />
-      )}
+      </div>
     </section>
   )
 }
-
 function ProfileSection({ profile, setProfile, sync, uploadImage }) {
   return (
     <section className="app-page">
