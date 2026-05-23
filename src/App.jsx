@@ -68,6 +68,28 @@ const dateIdeas = [
   'Morning walk and photo stop',
 ]
 
+const URGENT_REMINDER_MS = 24 * 60 * 60 * 1000
+
+function getFutureDifference(value, now) {
+  const target = new Date(value)
+
+  if (Number.isNaN(target.getTime())) {
+    return null
+  }
+
+  const difference = target.getTime() - now.getTime()
+
+  return difference >= 0 ? difference : null
+}
+
+function formatReminderCountdown(differenceMs) {
+  const totalMinutes = Math.max(1, Math.ceil(differenceMs / 60_000))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  return hours ? `${hours}h ${minutes}m left` : `${minutes}m left`
+}
+
 const timelineMoodMap = {
   romantic: 'giddy',
   adventure: 'wild',
@@ -467,6 +489,85 @@ function App() {
     return [...gallery].sort((a, b) => new Date(b.date || b.createdAt || 0).getTime() - new Date(a.date || a.createdAt || 0).getTime())
   }, [gallery])
 
+  const dashboardReminders = useMemo(() => {
+    const urgentDates = dates.flatMap((datePlan) => {
+      const difference = getFutureDifference(datePlan.when, now)
+
+      if (difference === null || difference > URGENT_REMINDER_MS) {
+        return []
+      }
+
+      return [
+        {
+          id: `date-${datePlan.id}`,
+          label: 'Event',
+          title: datePlan.title || 'Upcoming plan',
+          meta: `${formatReminderCountdown(difference)}${datePlan.place ? ` at ${datePlan.place}` : ''}`,
+          targetTab: 'date-lab',
+          sortTime: new Date(datePlan.when).getTime(),
+        },
+      ]
+    })
+
+    const urgentGoals = dreams.flatMap((goal) => {
+      const difference = getFutureDifference(goal.target, now)
+
+      if (difference === null || difference > URGENT_REMINDER_MS) {
+        return []
+      }
+
+      return [
+        {
+          id: `goal-${goal.id}`,
+          label: 'Goal',
+          title: goal.title || 'Shared goal',
+          meta: `${formatReminderCountdown(difference)} - ${goal.progress ?? 0}% complete`,
+          targetTab: 'dream-board',
+          sortTime: new Date(goal.target).getTime(),
+        },
+      ]
+    })
+
+    const noteReminders = notes.flatMap((note) => {
+      const difference = getFutureDifference(note.reminderAt, now)
+      const isDueSoon = difference !== null && difference <= URGENT_REMINDER_MS
+
+      if (!note.locked && !isDueSoon) {
+        return []
+      }
+
+      return [
+        {
+          id: `note-${note.id}`,
+          label: note.locked ? 'Unread note' : 'Note',
+          title: note.subject || 'Hidden note',
+          meta: isDueSoon
+            ? `${formatReminderCountdown(difference)}`
+            : note.createdAt
+              ? `Waiting since ${formatDateTime(note.createdAt)}`
+              : 'Waiting to be opened',
+          targetTab: 'notes',
+          sortTime: isDueSoon ? new Date(note.reminderAt).getTime() : Number.MAX_SAFE_INTEGER - 1,
+        },
+      ]
+    })
+
+    const unopenedMusic = playlist
+      .filter((track) => track.link && !track.openedAt)
+      .map((track) => ({
+        id: `track-${track.id}`,
+        label: 'Unopened music',
+        title: track.title || 'Song link',
+        meta: track.artist ? `From ${track.artist}` : 'A link is waiting',
+        targetTab: 'playlist',
+        sortTime: Number.MAX_SAFE_INTEGER,
+      }))
+
+    return [...urgentDates, ...urgentGoals, ...noteReminders, ...unopenedMusic]
+      .sort((left, right) => left.sortTime - right.sortTime)
+      .slice(0, 8)
+  }, [dates, dreams, notes, now, playlist])
+
   const selectTab = (nextTab) => {
     setTab(nextTab)
     setIsSidebarOpen(false)
@@ -585,6 +686,8 @@ function App() {
             topDream={topDream}
             timelineCount={timeline.length}
             notesCount={notes.length}
+            reminders={dashboardReminders}
+            onOpenTab={selectTab}
           />
         )}
 
@@ -685,6 +788,8 @@ function DashboardSection({
   topDream,
   timelineCount,
   notesCount,
+  reminders,
+  onOpenTab,
 }) {
   return (
     <section className="app-page dashboard-page">
@@ -713,6 +818,8 @@ function DashboardSection({
         title="A simple place for both of you"
         summary="Update your shared details, check what is next, and keep the important pieces organized."
       />
+
+      <ReminderPanel reminders={reminders} onOpenTab={onOpenTab} />
 
       <div className="dashboard-grid">
         <article className="metric-card metric-card-large">
@@ -763,6 +870,50 @@ function DashboardSection({
         </article>
       </div>
     </section>
+  )
+}
+
+function ReminderPanel({ reminders, onOpenTab }) {
+  if (!reminders.length) {
+    return (
+      <article className="reminder-panel">
+        <div>
+          <span className="metric-label">Reminders</span>
+          <h2>Nothing urgent right now</h2>
+        </div>
+        <p className="body-muted">Dates and goals within 24 hours, hidden notes, and unopened music links will appear here.</p>
+      </article>
+    )
+  }
+
+  return (
+    <article className="reminder-panel reminder-panel-active" aria-label="Urgent reminders">
+      <div className="reminder-panel-head">
+        <div>
+          <span className="metric-label">Needs attention</span>
+          <h2>{reminders.length} red-tag reminder{reminders.length === 1 ? '' : 's'}</h2>
+        </div>
+        <span className="reminder-count">{reminders.length}</span>
+      </div>
+
+      <div className="reminder-list">
+        {reminders.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className="reminder-item"
+            onClick={() => onOpenTab(item.targetTab)}
+          >
+            <span className="reminder-tag">{item.label}</span>
+            <span className="reminder-copy">
+              <strong>{item.title}</strong>
+              <small>{item.meta}</small>
+            </span>
+            <span className="reminder-action">Open</span>
+          </button>
+        ))}
+      </div>
+    </article>
   )
 }
 
@@ -1354,7 +1505,7 @@ function GoalsSection({ dreams, setDreams }) {
 }
 
 function NotesSection({ notes, setNotes, onUploadPhoto }) {
-  const [form, setForm] = useState({ subject: '', message: '', photo: '', locked: true })
+  const [form, setForm] = useState({ subject: '', message: '', photo: '', locked: true, reminderAt: '' })
   const [editingId, setEditingId] = useState(null)
 
   const add = (event) => {
@@ -1372,12 +1523,12 @@ function NotesSection({ notes, setNotes, onUploadPhoto }) {
       setNotes((items) => [{ id: createId('note'), ...form, createdAt: new Date().toISOString() }, ...items])
     }
 
-    setForm({ subject: '', message: '', photo: '', locked: true })
+    setForm({ subject: '', message: '', photo: '', locked: true, reminderAt: '' })
   }
 
   const cancelEdit = () => {
     setEditingId(null)
-    setForm({ subject: '', message: '', photo: '', locked: true })
+    setForm({ subject: '', message: '', photo: '', locked: true, reminderAt: '' })
   }
 
   const editNote = (note) => {
@@ -1387,6 +1538,7 @@ function NotesSection({ notes, setNotes, onUploadPhoto }) {
       message: note.message ?? '',
       photo: note.photo ?? '',
       locked: note.locked ?? false,
+      reminderAt: note.reminderAt ?? '',
     })
   }
 
@@ -1401,6 +1553,15 @@ function NotesSection({ notes, setNotes, onUploadPhoto }) {
           <label className="check-field">
             <input type="checkbox" checked={form.locked} onChange={(event) => setForm((value) => ({ ...value, locked: event.target.checked }))} />
             <span>Keep hidden until opened</span>
+          </label>
+          <label className="field-block">
+            <span>Reminder time optional</span>
+            <input
+              type="datetime-local"
+              className="input-field"
+              value={form.reminderAt}
+              onChange={(event) => setForm((value) => ({ ...value, reminderAt: event.target.value }))}
+            />
           </label>
           <RichTextEditor label="Message" value={form.message} onChange={(value) => setForm((current) => ({ ...current, message: value }))} placeholder="Write the note..." />
           <ImageUploadField
@@ -1429,7 +1590,10 @@ function NotesSection({ notes, setNotes, onUploadPhoto }) {
                 <div className="item-card-header">
                   <div>
                     <h3>{item.subject}</h3>
-                    <p className="body-muted">{formatDateTime(item.createdAt)}</p>
+                    <p className="body-muted">
+                      {formatDateTime(item.createdAt)}
+                      {item.reminderAt ? ` - Reminder ${formatDateTime(item.reminderAt)}` : ''}
+                    </p>
                   </div>
                   <div className="card-actions">
                     <span className={item.locked ? 'status-pill' : 'status-pill status-pill-open'}>{item.locked ? 'Hidden' : 'Open'}</span>
@@ -1479,7 +1643,14 @@ function MusicSection({ playlist, setPlaylist, now }) {
     if (editingId) {
       setPlaylist((items) =>
         items.map((item) =>
-          item.id === editingId ? { ...item, ...form, updatedAt: now.toISOString() } : item,
+          item.id === editingId
+            ? {
+                ...item,
+                ...form,
+                openedAt: item.link === form.link ? item.openedAt : '',
+                updatedAt: now.toISOString(),
+              }
+            : item,
         ),
       )
       setEditingId(null)
@@ -1539,6 +1710,11 @@ function MusicSection({ playlist, setPlaylist, now }) {
                     <p className="body-muted">{item.artist}</p>
                   </div>
                   <div className="card-actions">
+                    {item.link ? (
+                      <span className={item.openedAt ? 'status-pill status-pill-open' : 'status-pill status-pill-alert'}>
+                        {item.openedAt ? 'Opened' : 'Unopened'}
+                      </span>
+                    ) : null}
                     <Music4 className="h-5 w-5 accent-text" />
                     <button type="button" className="icon-action" aria-label={`Edit ${item.title}`} onClick={() => editTrack(item)}>
                       <Pencil className="h-4 w-4" />
@@ -1558,7 +1734,21 @@ function MusicSection({ playlist, setPlaylist, now }) {
                 </div>
                 <p className="body-muted">{formatDateTime(item.createdAt)}</p>
                 {item.link ? (
-                  <a className="app-link" href={item.link} target="_blank" rel="noreferrer">
+                  <a
+                    className="app-link"
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() =>
+                      setPlaylist((list) =>
+                        list.map((track) =>
+                          track.id === item.id
+                            ? { ...track, openedAt: track.openedAt || now.toISOString() }
+                            : track,
+                        ),
+                      )
+                    }
+                  >
                     Open link
                   </a>
                 ) : null}
