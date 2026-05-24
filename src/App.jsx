@@ -654,6 +654,18 @@ function App() {
   )
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false)
   const [idea, setIdea] = useState(dateIdeas[0])
+  const emptyWorkspace = useMemo(
+    () => ({
+      profile: initialProfile,
+      timeline: [],
+      dates: [],
+      dreams: [],
+      gallery: [],
+      notes: [],
+      playlist: [],
+    }),
+    [],
+  )
   const sync = useSupabaseWorkspace({
     profile,
     timeline,
@@ -669,6 +681,7 @@ function App() {
     setGallery,
     setNotes,
     setPlaylist,
+    emptyWorkspace,
   })
   const { logActivity } = sync
 

@@ -8,6 +8,15 @@ const SYNC_DELAY_MS = 700
 
 const asArray = (value) => (Array.isArray(value) ? value : [])
 const asProfile = (value, fallback) => ({ ...fallback, ...(value && typeof value === 'object' ? value : {}) })
+const createCleanWorkspace = (emptyWorkspace = {}) => ({
+  profile: asProfile(emptyWorkspace.profile, {}),
+  timeline: [],
+  dates: [],
+  dreams: [],
+  gallery: [],
+  notes: [],
+  playlist: [],
+})
 const getWorkspaceCounts = (workspace) => ({
   dates: asArray(workspace.dates).length,
   gallery: asArray(workspace.gallery).length,
@@ -32,6 +41,7 @@ export function useSupabaseWorkspace({
   setGallery,
   setNotes,
   setPlaylist,
+  emptyWorkspace,
 }) {
   const [session, setSession] = useState(null)
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
@@ -55,6 +65,19 @@ export function useSupabaseWorkspace({
   const supportsActivityLogsRef = useRef(true)
   const hasLoggedAppOpenRef = useRef(false)
   const saveTimerRef = useRef(null)
+
+  const resetToCleanWorkspace = useCallback(() => {
+    const cleanWorkspace = createCleanWorkspace(emptyWorkspace)
+    latestWorkspaceRef.current = cleanWorkspace
+    setProfile(cleanWorkspace.profile)
+    setTimeline(cleanWorkspace.timeline)
+    setDates(cleanWorkspace.dates)
+    setDreams(cleanWorkspace.dreams)
+    setGallery(cleanWorkspace.gallery)
+    setNotes(cleanWorkspace.notes)
+    setPlaylist(cleanWorkspace.playlist)
+    return cleanWorkspace
+  }, [emptyWorkspace, setDates, setDreams, setGallery, setNotes, setPlaylist, setProfile, setTimeline])
 
   useEffect(() => {
     latestWorkspaceRef.current = {
@@ -130,6 +153,10 @@ export function useSupabaseWorkspace({
       if (!data.session) {
         setSyncStatus('signed-out')
         setSyncMessage('Sign in to sync this couple space across devices.')
+      } else {
+        resetToCleanWorkspace()
+        setSyncStatus('loading')
+        setSyncMessage('Loading your account workspace...')
       }
     })
 
@@ -142,6 +169,10 @@ export function useSupabaseWorkspace({
       if (!nextSession) {
         setSyncStatus('signed-out')
         setSyncMessage('Signed out. New edits are saved on this device only.')
+      } else {
+        resetToCleanWorkspace()
+        setSyncStatus('loading')
+        setSyncMessage('Loading your account workspace...')
       }
     })
 
@@ -149,7 +180,7 @@ export function useSupabaseWorkspace({
       isMounted = false
       data.subscription.unsubscribe()
     }
-  }, [])
+  }, [resetToCleanWorkspace])
 
   useEffect(() => {
     if (!isSupabaseConfigured || !authReady) {
@@ -195,8 +226,8 @@ export function useSupabaseWorkspace({
       }
 
       if (data) {
-        const currentWorkspace = latestWorkspaceRef.current
-        setProfile(asProfile(data.profile, currentWorkspace.profile))
+        const cleanWorkspace = createCleanWorkspace(emptyWorkspace)
+        setProfile(asProfile(data.profile, cleanWorkspace.profile))
         setTimeline(asArray(data.timeline))
         setDates(asArray(data.dates))
         setDreams(asArray(data.dreams))
@@ -208,7 +239,7 @@ export function useSupabaseWorkspace({
           label: 'Workspace loaded',
         })
       } else {
-        const initialWorkspace = { ...latestWorkspaceRef.current }
+        const initialWorkspace = resetToCleanWorkspace()
 
         if (!supportsGalleryRef.current) {
           delete initialWorkspace.gallery
@@ -226,7 +257,7 @@ export function useSupabaseWorkspace({
         }
 
         void logActivity('workspace_created', {
-          counts: getWorkspaceCounts(latestWorkspaceRef.current),
+          counts: getWorkspaceCounts(initialWorkspace),
           label: 'Workspace created',
         })
       }
@@ -246,7 +277,7 @@ export function useSupabaseWorkspace({
     return () => {
       isCancelled = true
     }
-  }, [authReady, logActivity, session?.user, setDates, setDreams, setGallery, setNotes, setPlaylist, setProfile, setTimeline])
+  }, [authReady, emptyWorkspace, logActivity, resetToCleanWorkspace, session?.user, setDates, setDreams, setGallery, setNotes, setPlaylist, setProfile, setTimeline])
 
   useEffect(() => {
     if (!isSupabaseConfigured || !session?.user || !remoteReady || !hasHydratedRemoteRef.current) {
