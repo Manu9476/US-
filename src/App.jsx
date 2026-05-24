@@ -53,6 +53,7 @@ import {
   formatDate,
   formatDateTime,
   getCountdownParts,
+  getDailyQuote,
   getDaysTogether,
   sortByDateAsc,
 } from './lib/utils'
@@ -686,7 +687,7 @@ function App() {
   const { logActivity } = sync
 
   const days = getDaysTogether(profile.since, now)
-  const quote = LOVE_QUOTES[now.getDate() % LOVE_QUOTES.length]
+  const quote = getDailyQuote(LOVE_QUOTES, now)
 
   const upcomingDates = useMemo(
     () => sortByDateAsc(dates.filter((item) => new Date(item.when).getTime() >= now.getTime()), (item) => item.when),
