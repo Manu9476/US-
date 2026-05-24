@@ -670,6 +670,7 @@ function App() {
     setNotes,
     setPlaylist,
   })
+  const { logActivity } = sync
 
   const days = getDaysTogether(profile.since, now)
   const quote = LOVE_QUOTES[now.getDate() % LOVE_QUOTES.length]
@@ -822,6 +823,17 @@ function App() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (!sync.isConfigured || !sync.authReady) {
+      return
+    }
+
+    void logActivity('section_view', {
+      label: `Viewed ${activeLabel}`,
+      section: tab,
+    })
+  }, [activeLabel, logActivity, sync.authReady, sync.isConfigured, tab])
 
   if (sync.isConfigured && !sync.authReady) {
     return (
