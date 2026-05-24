@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Lock, LogOut, ShieldCheck, Wifi, WifiOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertCircle, Lock, LogOut, ShieldCheck, Wifi, WifiOff, X } from 'lucide-react'
 
 function getStatusLabel(syncStatus) {
   if (syncStatus === 'saving') return 'Saving'
@@ -35,6 +35,16 @@ export function SyncPanel({
   const [password, setPassword] = useState('')
   const [mode, setMode] = useState('signin')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [visibleAuthMessage, setVisibleAuthMessage] = useState('')
+
+  useEffect(() => {
+    if (!authMessage) return undefined
+
+    setVisibleAuthMessage(authMessage)
+    const timeoutId = window.setTimeout(() => setVisibleAuthMessage(''), 8000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [authMessage])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -88,6 +98,19 @@ export function SyncPanel({
 
   return (
     <article className="sync-panel">
+      {visibleAuthMessage ? (
+        <div className="auth-message-toast" role="alert" aria-live="assertive">
+          <AlertCircle className="h-5 w-5" />
+          <p>{visibleAuthMessage}</p>
+          <button
+            type="button"
+            aria-label="Dismiss auth message"
+            onClick={() => setVisibleAuthMessage('')}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
       <div className="sync-icon">
         <Lock className="h-5 w-5" />
       </div>
@@ -115,7 +138,7 @@ export function SyncPanel({
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        {authMessage ? <p className="sync-message">{authMessage}</p> : null}
+        {authMessage ? <p className="sync-message sync-message-error">{authMessage}</p> : null}
         <div className="form-actions">
           <button type="submit" className="primary-button" disabled={isSubmitting}>
             {isSubmitting ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Sign in'}

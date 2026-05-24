@@ -1253,6 +1253,51 @@ a {
   color: #dc2626;
 }
 
+.auth-message-toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 320;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  width: min(440px, calc(100vw - 28px));
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  border-radius: 18px;
+  background: #fef2f2;
+  padding: 14px;
+  color: #991b1b;
+  box-shadow: 0 22px 54px rgba(153, 27, 27, 0.18);
+}
+
+.auth-message-toast svg {
+  color: #dc2626;
+}
+
+.auth-message-toast p {
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.auth-message-toast button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.1);
+  color: #991b1b;
+}
+
+.auth-message-toast button:hover {
+  background: rgba(220, 38, 38, 0.18);
+}
+
 .couple-photo-frame {
   position: relative;
   overflow: hidden;
@@ -2431,6 +2476,14 @@ a {
 
   .auth-copy h1 {
     font-size: 38px;
+  }
+
+  .auth-message-toast {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    border-radius: 16px;
   }
 
   .app-main {
