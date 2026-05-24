@@ -3,7 +3,7 @@ export const LOVE_QUOTES = [
   'Even ordinary days feel golden when they begin with us.',
   'You are the calm in my chest and the spark in my sky.',
   'Our story keeps turning small moments into forever things.',
-  'The softest part of my day is always wherever you are.',
+  'You are my today, my calm, and my favorite forever.',
   'We make even silence feel like music.',
   'You are my safe place, my best laugh, and my sweetest plan.',
   'Every version of tomorrow feels brighter with you in it.',
