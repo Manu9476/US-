@@ -200,6 +200,178 @@ from auth.users as users
 left join public.us_plus_workspaces as workspaces
   on workspaces.user_id = users.id;
 
+create or replace view public.us_plus_excel_accounts as
+select
+  users.id as user_id,
+  users.email,
+  users.created_at as account_created_at,
+  users.last_sign_in_at,
+  workspaces.updated_at as workspace_updated_at,
+  workspaces.profile ->> 'one' as partner_one,
+  workspaces.profile ->> 'two' as partner_two,
+  workspaces.profile ->> 'since' as relationship_start_date,
+  workspaces.profile ->> 'photoUrl' as couple_photo_url,
+  jsonb_array_length(coalesce(workspaces.timeline, '[]'::jsonb)) as memory_count,
+  jsonb_array_length(coalesce(workspaces.gallery, '[]'::jsonb)) as gallery_photo_count,
+  jsonb_array_length(coalesce(workspaces.dates, '[]'::jsonb)) as date_count,
+  jsonb_array_length(coalesce(workspaces.dreams, '[]'::jsonb)) as goal_count,
+  jsonb_array_length(coalesce(workspaces.notes, '[]'::jsonb)) as note_count,
+  jsonb_array_length(coalesce(workspaces.playlist, '[]'::jsonb)) as playlist_count
+from auth.users as users
+left join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id;
+
+create or replace view public.us_plus_excel_activity_logs as
+select
+  logs.id as log_id,
+  logs.occurred_at,
+  logs.user_id,
+  users.email,
+  logs.event_type,
+  logs.event_label,
+  logs.page_path,
+  logs.user_agent,
+  logs.metadata ->> 'active_email' as active_email,
+  logs.metadata ->> 'email' as metadata_email,
+  logs.metadata ->> 'label' as metadata_label,
+  logs.metadata ->> 'section' as section,
+  logs.metadata ->> 'auth_state' as auth_state,
+  logs.metadata ->> 'error_message' as error_message,
+  logs.metadata ->> 'file_name' as file_name,
+  logs.metadata ->> 'file_type' as file_type,
+  logs.metadata ->> 'file_size' as file_size,
+  logs.metadata ->> 'storage_path' as storage_path,
+  logs.metadata ->> 'counts' as counts_json,
+  logs.metadata as full_metadata
+from public.us_plus_activity_logs as logs
+left join auth.users as users
+  on users.id = logs.user_id;
+
+create or replace view public.us_plus_excel_memories as
+select
+  users.id as user_id,
+  users.email,
+  memory.item_order,
+  memory.value ->> 'id' as memory_id,
+  memory.value ->> 'title' as title,
+  memory.value ->> 'date' as memory_date,
+  memory.value ->> 'mood' as mood,
+  regexp_replace(coalesce(memory.value ->> 'note', ''), '<[^>]+>', '', 'g') as note_text,
+  memory.value ->> 'photoUrl' as photo_url,
+  memory.value ->> 'photo' as photo,
+  memory.value ->> 'createdAt' as created_at,
+  memory.value ->> 'updatedAt' as updated_at
+from auth.users as users
+join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id
+join lateral jsonb_array_elements(coalesce(workspaces.timeline, '[]'::jsonb)) with ordinality as memory(value, item_order)
+  on true;
+
+create or replace view public.us_plus_excel_gallery as
+select
+  users.id as user_id,
+  users.email,
+  photo.item_order,
+  photo.value ->> 'id' as photo_id,
+  photo.value ->> 'uploadedAt' as uploaded_at,
+  photo.value ->> 'createdAt' as created_at,
+  photo.value ->> 'optimizedAt' as optimized_at,
+  photo.value ->> 'fileName' as file_name,
+  photo.value ->> 'photoUrl' as photo_url,
+  photo.value ->> 'thumbUrl' as thumbnail_url,
+  photo.value ->> 'title' as legacy_title,
+  photo.value ->> 'caption' as legacy_caption
+from auth.users as users
+join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id
+join lateral jsonb_array_elements(coalesce(workspaces.gallery, '[]'::jsonb)) with ordinality as photo(value, item_order)
+  on true;
+
+create or replace view public.us_plus_excel_dates as
+select
+  users.id as user_id,
+  users.email,
+  date_plan.item_order,
+  date_plan.value ->> 'id' as date_id,
+  date_plan.value ->> 'title' as title,
+  date_plan.value ->> 'when' as planned_for,
+  date_plan.value ->> 'place' as location,
+  regexp_replace(coalesce(date_plan.value ->> 'note', ''), '<[^>]+>', '', 'g') as note_text,
+  date_plan.value ->> 'photo' as photo_url,
+  date_plan.value ->> 'createdAt' as created_at,
+  date_plan.value ->> 'updatedAt' as updated_at
+from auth.users as users
+join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id
+join lateral jsonb_array_elements(coalesce(workspaces.dates, '[]'::jsonb)) with ordinality as date_plan(value, item_order)
+  on true;
+
+create or replace view public.us_plus_excel_goals as
+select
+  users.id as user_id,
+  users.email,
+  goal.item_order,
+  goal.value ->> 'id' as goal_id,
+  goal.value ->> 'title' as title,
+  goal.value ->> 'target' as target_date,
+  case
+    when (goal.value ->> 'progress') ~ '^[0-9]+(\.[0-9]+)?$' then (goal.value ->> 'progress')::numeric
+    else null
+  end as progress_percent,
+  goal.value ->> 'createdAt' as created_at,
+  goal.value ->> 'updatedAt' as updated_at
+from auth.users as users
+join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id
+join lateral jsonb_array_elements(coalesce(workspaces.dreams, '[]'::jsonb)) with ordinality as goal(value, item_order)
+  on true;
+
+create or replace view public.us_plus_excel_notes as
+select
+  users.id as user_id,
+  users.email,
+  note.item_order,
+  note.value ->> 'id' as note_id,
+  note.value ->> 'subject' as subject,
+  case when note.value ->> 'locked' = 'true' then true else false end as is_hidden,
+  note.value ->> 'reminderAt' as reminder_at,
+  regexp_replace(coalesce(note.value ->> 'message', ''), '<[^>]+>', '', 'g') as message_text,
+  note.value ->> 'photo' as photo_url,
+  note.value ->> 'createdAt' as created_at,
+  note.value ->> 'updatedAt' as updated_at
+from auth.users as users
+join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id
+join lateral jsonb_array_elements(coalesce(workspaces.notes, '[]'::jsonb)) with ordinality as note(value, item_order)
+  on true;
+
+create or replace view public.us_plus_excel_playlist as
+select
+  users.id as user_id,
+  users.email,
+  track.item_order,
+  track.value ->> 'id' as track_id,
+  track.value ->> 'title' as title,
+  track.value ->> 'artist' as artist,
+  track.value ->> 'link' as link,
+  track.value ->> 'createdAt' as created_at,
+  track.value ->> 'updatedAt' as updated_at,
+  track.value ->> 'openedAt' as opened_at,
+  case when nullif(track.value ->> 'openedAt', '') is null then true else false end as is_unopened
+from auth.users as users
+join public.us_plus_workspaces as workspaces
+  on workspaces.user_id = users.id
+join lateral jsonb_array_elements(coalesce(workspaces.playlist, '[]'::jsonb)) with ordinality as track(value, item_order)
+  on true;
+
 revoke all on public.us_plus_admin_account_overview from anon, authenticated;
 revoke all on public.us_plus_admin_activity_summary from anon, authenticated;
 revoke all on public.us_plus_admin_workspace_content from anon, authenticated;
+revoke all on public.us_plus_excel_accounts from anon, authenticated;
+revoke all on public.us_plus_excel_activity_logs from anon, authenticated;
+revoke all on public.us_plus_excel_memories from anon, authenticated;
+revoke all on public.us_plus_excel_gallery from anon, authenticated;
+revoke all on public.us_plus_excel_dates from anon, authenticated;
+revoke all on public.us_plus_excel_goals from anon, authenticated;
+revoke all on public.us_plus_excel_notes from anon, authenticated;
+revoke all on public.us_plus_excel_playlist from anon, authenticated;
